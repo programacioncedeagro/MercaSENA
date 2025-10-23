@@ -4,13 +4,52 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { mockProductions } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Calendar, MapPin, Search } from 'lucide-react';
+import { Calendar, MapPin, Search, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, getDocs } from 'firebase/firestore';
+import type { Production } from '@/lib/types';
+import { useEffect, useState } from 'react';
+
+type ProductionWithProducer = Production & { producerName: string, producerId: string };
 
 export default function BuyerMarketplacePage() {
+  const firestore = useFirestore();
+  const [productions, setProductions] = useState<ProductionWithProducer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!firestore) return;
+    
+    const fetchProductions = async () => {
+      setIsLoading(true);
+      const allProductions: ProductionWithProducer[] = [];
+      const usersSnapshot = await getDocs(collection(firestore, 'users'));
+      
+      for (const userDoc of usersSnapshot.docs) {
+        const userData = userDoc.data();
+        if (userData.role === 'productor') {
+          const productionsSnapshot = await getDocs(collection(firestore, 'users', userDoc.id, 'productions'));
+          productionsSnapshot.forEach(prodDoc => {
+            allProductions.push({
+              ...(prodDoc.data() as Production),
+              id: prodDoc.id,
+              producerName: userData.name,
+              producerId: userDoc.id,
+            });
+          });
+        }
+      }
+      setProductions(allProductions);
+      setIsLoading(false);
+    };
+
+    fetchProductions();
+  }, [firestore]);
+
+
   return (
     <div className="flex flex-col gap-8">
       <div>
@@ -49,52 +88,56 @@ export default function BuyerMarketplacePage() {
         </div>
       </Card>
 
-      <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
-        {mockProductions.map((prod) => {
-          const productImage = PlaceHolderImages.find(p => p.imageUrl === prod.productImage);
-          return (
-            <Card key={prod.id} className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardHeader className="p-0 relative">
-                 {productImage && (
-                    <Image
-                      src={productImage.imageUrl}
-                      alt={prod.name}
-                      width={600}
-                      height={400}
-                      className="object-cover w-full h-48"
-                      data-ai-hint={productImage.imageHint}
-                    />
-                  )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                 <CardTitle className="absolute bottom-0 left-0 p-6 text-3xl font-bold text-white">
-                    {prod.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex-grow p-6 space-y-4">
-                 <CardDescription className="font-bold text-foreground text-lg">
-                    Producido por {prod.producerName}
-                </CardDescription>
-                <div className="flex items-center text-muted-foreground">
-                  <MapPin className="mr-2 h-5 w-5" />
-                  <span>{prod.location}</span>
-                </div>
-                <div className="flex items-center text-muted-foreground">
-                  <Calendar className="mr-2 h-5 w-5" />
-                  <span>Cosecha estimada: <span className="font-bold text-foreground">{new Date(prod.estimatedHarvestDate).toLocaleDateString('es-CO', { month: 'long', day: 'numeric' })}</span></span>
-                </div>
-                 <div className="text-sm font-medium">
-                    Progreso actual: <span className="font-bold text-primary">{prod.progress}%</span>
-                </div>
-              </CardContent>
-              <CardFooter className="p-6 bg-muted/50">
-                <Button asChild className="w-full h-12 text-lg" >
-                    <Link href={`/comprador/producto/${prod.id}`}>Ver Producto y Ofertar</Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          );
-        })}
-      </div>
+      {isLoading && <div className="flex justify-center items-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>}
+
+      {!isLoading && (
+        <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
+          {productions.map((prod) => {
+            const productImage = PlaceHolderImages.find(p => p.imageUrl === prod.productImage);
+            return (
+              <Card key={prod.id} className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <CardHeader className="p-0 relative">
+                  {productImage && (
+                      <Image
+                        src={productImage.imageUrl}
+                        alt={prod.name}
+                        width={600}
+                        height={400}
+                        className="object-cover w-full h-48"
+                        data-ai-hint={productImage.imageHint}
+                      />
+                    )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <CardTitle className="absolute bottom-0 left-0 p-6 text-3xl font-bold text-white">
+                      {prod.name}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex-grow p-6 space-y-4">
+                  <CardDescription className="font-bold text-foreground text-lg">
+                      Producido por {prod.producerName}
+                  </CardDescription>
+                  <div className="flex items-center text-muted-foreground">
+                    <MapPin className="mr-2 h-5 w-5" />
+                    <span>{prod.location}</span>
+                  </div>
+                  <div className="flex items-center text-muted-foreground">
+                    <Calendar className="mr-2 h-5 w-5" />
+                    <span>Cosecha estimada: <span className="font-bold text-foreground">{new Date(prod.estimatedHarvestDate).toLocaleDateString('es-CO', { month: 'long', day: 'numeric' })}</span></span>
+                  </div>
+                  <div className="text-sm font-medium">
+                      Progreso actual: <span className="font-bold text-primary">{prod.progress}%</span>
+                  </div>
+                </CardContent>
+                <CardFooter className="p-6 bg-muted/50">
+                  <Button asChild className="w-full h-12 text-lg" >
+                      <Link href={`/comprador/producto/${prod.producerId}/${prod.id}`}>Ver Producto y Ofertar</Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

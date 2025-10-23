@@ -1,12 +1,15 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { mockProductions } from "@/lib/data";
+import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Leaf, Calendar, Info } from "lucide-react";
+import { Leaf, Calendar, Info, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { collection, query, where, getDocs, doc } from 'firebase/firestore';
+import type { Offer, Production } from "@/lib/types";
+import { useEffect, useState } from "react";
 
 const statusStyles = {
     pendiente: 'bg-yellow-100 text-yellow-800 border-yellow-300',
@@ -15,18 +18,66 @@ const statusStyles = {
     negociación: 'bg-blue-100 text-blue-800 border-blue-300',
 };
 
-// For simulation, we assume all offers belong to one buyer.
-// In a real app, this would be filtered by the logged-in user's ID.
+type OfferWithDetails = Offer & {
+    productName: string;
+    productImage?: string;
+    producerName: string;
+    estimatedHarvestDate: string;
+};
+
+
 export default function MyPurchasesPage() {
-    const myOffers = mockProductions.flatMap(p => 
-        p.offers.map(o => ({ 
-            ...o, 
-            productName: p.name, 
-            productImage: p.productImage, 
-            producerName: p.producerName,
-            estimatedHarvestDate: p.estimatedHarvestDate
-        }))
-    );
+    const { user } = useUser();
+    const firestore = useFirestore();
+    const [myOffers, setMyOffers] = useState<OfferWithDetails[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        if (!user || !firestore) return;
+
+        const fetchOffers = async () => {
+            setIsLoading(true);
+            const offersQuery = query(collection(firestore, 'offers'), where('buyerId', '==', user.uid));
+            const offersSnapshot = await getDocs(offersQuery);
+            const offers: OfferWithDetails[] = [];
+
+            for (const offerDoc of offersSnapshot.docs) {
+                const offerData = offerDoc.data() as Offer;
+                
+                // Firestore paths can't be fetched directly like this, need to traverse.
+                // This is a simplification. A real app might need a denormalized product reference.
+                try {
+                    const productRef = doc(firestore, `productions/${offerData.productId}`);
+                    const productionDoc = (await getDocs(query(collection(firestore, 'users').withConverter({fromFirestore: (snapshot): {id: string, name: string} => ({id: snapshot.id, name: snapshot.data().name}), toFirestore: (model) => model}), where('__name__', '==', offerData.producerId)))).docs[0];
+
+                    const productionSnap = await getDocs(query(collection(firestore, `users/${productionDoc.id}/productions`), where('__name__', '==', offerData.productId)));
+                    if (!productionSnap.empty) {
+                        const productionData = productionSnap.docs[0].data() as Production;
+                         offers.push({
+                            ...offerData,
+                            id: offerDoc.id,
+                            productName: productionData.name,
+                            productImage: productionData.productImage,
+                            producerName: productionDoc.data().name,
+                            estimatedHarvestDate: productionData.estimatedHarvestDate,
+                        });
+                    }
+                } catch(e) {
+                    console.error("Error fetching related product data for offer:", e)
+                }
+            }
+            
+            setMyOffers(offers);
+            setIsLoading(false);
+        };
+
+        fetchOffers();
+
+    }, [user, firestore]);
+
+    if (isLoading) {
+        return <div className="flex justify-center items-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
+    }
 
     return (
         <div className="flex flex-col gap-8">
@@ -70,7 +121,7 @@ export default function MyPurchasesPage() {
                                 <CardContent className="grid sm:grid-cols-2 gap-4 text-lg">
                                     <div>
                                         <p className="text-sm text-muted-foreground">Cantidad Ofertada</p>
-                                        <p className="font-bold">{offer.amount} kg</p>
+                                        <p className="font-bold">{offer.pricePerUnit} kg</p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-muted-foreground">Precio Ofertado/kg</p>

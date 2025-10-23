@@ -11,16 +11,19 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Textarea } from '@/components/ui/textarea';
 import { CalendarIcon, Bot, Loader2, Wand2, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { getHarvestEstimateAction } from '@/app/actions';
 import type { ProjectedHarvestEstimatesOutput } from '@/ai/flows/projected-harvest-estimates';
+import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 
 const productionSchema = z.object({
-  cropType: z.string().min(1, 'El tipo de cultivo es requerido.'),
+  name: z.string().min(1, 'El nombre del producto es requerido.'),
+  type: z.enum(['Agrícola', 'Pecuario'], { required_error: 'El tipo de producto es requerido.'}),
   plantingDate: z.date({ required_error: 'La fecha de siembra es requerida.' }),
   location: z.string().min(1, 'La ubicación es requerida.'),
   area: z.coerce.number().min(0.1, 'El área debe ser mayor a 0.'),
@@ -32,8 +35,13 @@ export default function NewProductionPage() {
   const { toast } = useToast();
   const [isEstimating, setIsEstimating] = useState(false);
   const [estimationResult, setEstimationResult] = useState<ProjectedHarvestEstimatesOutput | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const firestore = useFirestore();
+  const { user } = useUser();
+  const router = useRouter();
 
-  const { register, handleSubmit, control, watch, formState: { errors } } = useForm<ProductionFormValues>({
+  const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<ProductionFormValues>({
     resolver: zodResolver(productionSchema),
   });
   
@@ -41,13 +49,13 @@ export default function NewProductionPage() {
 
   const handleEstimate: React.MouseEventHandler<HTMLButtonElement> = async (e) => {
     e.preventDefault();
-    const { cropType, plantingDate, location } = watchedFields;
+    const { name, plantingDate, location } = watchedFields;
 
-    if (!cropType || !plantingDate || !location) {
+    if (!name || !plantingDate || !location) {
       toast({
         variant: "destructive",
         title: "Faltan datos para la estimación",
-        description: "Por favor, completa el tipo de cultivo, la fecha de siembra y la ubicación.",
+        description: "Por favor, completa el nombre del producto, la fecha de siembra y la ubicación.",
       });
       return;
     }
@@ -56,7 +64,7 @@ export default function NewProductionPage() {
     setEstimationResult(null);
 
     const result = await getHarvestEstimateAction({
-      cropType,
+      cropType: name,
       plantingDate: format(plantingDate, 'yyyy-MM-dd'),
       location,
     });
@@ -78,12 +86,37 @@ export default function NewProductionPage() {
     }
   };
 
-  const onSubmit: SubmitHandler<ProductionFormValues> = (data) => {
-    console.log(data, estimationResult);
+  const onSubmit: SubmitHandler<ProductionFormValues> = async (data) => {
+    if (!user || !firestore) {
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo registrar, intenta de nuevo.'});
+        return;
+    }
+    if (!estimationResult) {
+        toast({ variant: 'destructive', title: 'Estimación requerida', description: 'Por favor, genera una estimación de cosecha con IA antes de registrar.'});
+        return;
+    }
+
+    setIsSubmitting(true);
+
+    const productionData = {
+        ...data,
+        plantingDate: format(data.plantingDate, 'yyyy-MM-dd'),
+        estimatedHarvestDate: estimationResult.estimatedHarvestDate,
+        progress: 5, // Initial progress
+        status: 'Planeación',
+        producerId: user.uid,
+        createdAt: new Date().toISOString(),
+    };
+    
+    const productionsRef = collection(firestore, 'users', user.uid, 'productions');
+    await addDocumentNonBlocking(productionsRef, productionData);
+
     toast({
-      title: 'Producción Registrada (Simulación)',
-      description: `Se ha registrado el cultivo de ${data.cropType}.`,
+      title: '¡Producción Registrada!',
+      description: `Se ha registrado el cultivo de ${data.name}.`,
     });
+    setIsSubmitting(false);
+    router.push('/productor/produccion');
   };
 
   return (
@@ -103,20 +136,23 @@ export default function NewProductionPage() {
           </CardHeader>
           <CardContent className="grid md:grid-cols-2 gap-8">
             <div className="space-y-2">
-              <Label htmlFor="cropType">Tipo de Producto</Label>
-              <Select onValueChange={(value) => control._formValues.cropType = value}>
-                <SelectTrigger id="cropType">
-                  <SelectValue placeholder="Selecciona un producto" />
+              <Label htmlFor="name">Nombre del Producto</Label>
+              <Input id="name" placeholder="Ej: Tomate, Lechuga, Pollo..." {...register('name')} />
+              {errors.name && <p className="text-destructive text-sm">{errors.name.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="type">Tipo de Producto</Label>
+              <Select onValueChange={(value: 'Agrícola' | 'Pecuario') => setValue('type', value)}>
+                <SelectTrigger id="type">
+                  <SelectValue placeholder="Selecciona un tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Tomate">Tomate</SelectItem>
-                  <SelectItem value="Lechuga">Lechuga</SelectItem>
-                  <SelectItem value="Papa">Papa</SelectItem>
-                  <SelectItem value="Pollo">Pollo</SelectItem>
-                  <SelectItem value="Maiz">Maíz</SelectItem>
+                  <SelectItem value="Agrícola">Agrícola</SelectItem>
+                  <SelectItem value="Pecuario">Pecuario</SelectItem>
                 </SelectContent>
               </Select>
-              {errors.cropType && <p className="text-destructive text-sm">{errors.cropType.message}</p>}
+              {errors.type && <p className="text-destructive text-sm">{errors.type.message}</p>}
             </div>
 
             <div className="space-y-2">
@@ -127,7 +163,7 @@ export default function NewProductionPage() {
 
             <div className="space-y-2">
               <Label htmlFor="plantingDate">Fecha de Siembra/Inicio</Label>
-              <Popover>
+               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start text-left font-normal h-12 text-base">
                     <CalendarIcon className="mr-2 h-4 w-4" />
@@ -138,7 +174,7 @@ export default function NewProductionPage() {
                   <Calendar
                     mode="single"
                     selected={watchedFields.plantingDate}
-                    onSelect={(date) => control._formValues.plantingDate = date}
+                    onSelect={(date) => date && setValue('plantingDate', date)}
                     initialFocus
                     locale={es}
                   />
@@ -161,13 +197,13 @@ export default function NewProductionPage() {
               <Bot className="text-primary"/> Proyecciones con IA
             </CardTitle>
             <CardDescription>
-              Usa nuestra inteligencia artificial para estimar la fecha de cosecha.
+              Usa nuestra inteligencia artificial para estimar la fecha de cosecha. Este paso es obligatorio.
             </CardDescription>
-          </Header>
+          </CardHeader>
           <CardContent className="space-y-6">
             <Button
               onClick={handleEstimate}
-              disabled={isEstimating || !watchedFields.cropType || !watchedFields.plantingDate || !watchedFields.location}
+              disabled={isEstimating || !watchedFields.name || !watchedFields.plantingDate || !watchedFields.location}
               className="w-full h-14 text-lg"
             >
               {isEstimating ? (
@@ -191,8 +227,8 @@ export default function NewProductionPage() {
         </Card>
 
         <div className="flex justify-end">
-          <Button type="submit" size="lg" className="h-16 text-xl min-w-[200px]">
-            Registrar Producción
+          <Button type="submit" size="lg" className="h-16 text-xl min-w-[200px]" disabled={isSubmitting || !estimationResult}>
+            {isSubmitting ? <Loader2 className="animate-spin" /> : "Registrar Producción"}
           </Button>
         </div>
       </form>

@@ -15,12 +15,16 @@ export type OfferStatus = 'pendiente' | 'aceptada' | 'rechazada' | 'negociación
 
 export type Offer = {
   id: string;
-  buyerName: string;
   buyerId: string;
+  producerId: string;
+  productId: string; // This is the ID of the Production document
   amount: number;
   pricePerUnit: number;
   deliveryDate: string;
   status: OfferStatus;
+  createdAt: string;
+  // Denormalized fields for easier display
+  buyerName?: string; 
 };
 
 export type Production = {
@@ -28,16 +32,14 @@ export type Production = {
   name: string;
   type: 'Agrícola' | 'Pecuario';
   productImage?: string;
-  icon?: LucideIcon;
-  producerName: string;
+  producerId: string;
   location: string;
   area: number; // in hectares for agricultural, or units for livestock
-  startDate: string;
+  plantingDate: string;
   status: ProductionStatus;
   progress: number;
   estimatedHarvestDate: string;
-  projectedYield: string;
-  offers: Offer[];
+  // projectedYield: string; // This can be added later as a feature
   activities: Activity[];
   traceabilityId: string;
 };

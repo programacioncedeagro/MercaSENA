@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { notFound, useParams } from 'next/navigation';
-import { mockProductions } from '@/lib/data';
+import { useState, useEffect } from 'react';
+import { useParams, notFound, useRouter } from 'next/navigation';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,18 +9,46 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, MapPin, Tractor, Sprout, CheckCircle, Scale, DollarSign, Package } from 'lucide-react';
+import { Calendar, MapPin, Tractor, Sprout, CheckCircle, Scale, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useUser, useDoc, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
+import type { Production } from '@/lib/types';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const { id } = params;
+  // The url is /comprador/producto/[producerId]/[productionId]
+  const producerId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const productionId = Array.isArray(params.id) ? params.id[1] : '';
   const { toast } = useToast();
+  const router = useRouter();
 
   const [quantity, setQuantity] = useState(100);
   const [price, setPrice] = useState(2000);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const production = mockProductions.find(p => p.id === id);
+  const firestore = useFirestore();
+  const { user } = useUser();
+
+  const productionDocRef = useMemoFirebase(() => {
+    if (!firestore || !producerId || !productionId) return null;
+    return doc(firestore, `users/${producerId}/productions/${productionId}`);
+  }, [firestore, producerId, productionId]);
+
+  const { data: production, isLoading: isProductionLoading } = useDoc<Production>(productionDocRef);
+
+  const producerDocRef = useMemoFirebase(() => {
+    if (!firestore || !producerId) return null;
+    return doc(firestore, 'users', producerId);
+  }, [firestore, producerId]);
+
+  const { data: producer, isLoading: isProducerLoading } = useDoc<{name: string}>(producerDocRef);
+
+  if (isProductionLoading || isProducerLoading) {
+    return <div className="flex h-screen items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /></div>;
+  }
 
   if (!production) {
     return notFound();
@@ -31,12 +58,34 @@ export default function ProductDetailPage() {
   const productImage = findImage(production.productImage);
   const totalValue = quantity * price;
 
-  const handleOfferSubmit = (e: React.FormEvent) => {
+  const handleOfferSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user || !firestore) {
+        toast({ variant: 'destructive', title: "Error", description: "Debes iniciar sesión para ofertar." });
+        return;
+    }
+    setIsSubmitting(true);
+    
+    const offerRef = collection(firestore, 'offers');
+    
+    await addDocumentNonBlocking(offerRef, {
+        buyerId: user.uid,
+        producerId: producerId,
+        productId: productionId,
+        amount: quantity,
+        pricePerUnit: price,
+        deliveryDate: production.estimatedHarvestDate, // For now, use the estimated harvest date
+        status: 'pendiente',
+        createdAt: new Date().toISOString(),
+    });
+
     toast({
-        title: "¡Oferta Enviada! (Simulación)",
+        title: "¡Oferta Enviada!",
         description: `Tu oferta de ${quantity}kg a ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(price)}/kg ha sido enviada.`,
     });
+    
+    setIsSubmitting(false);
+    router.push('/comprador/compras');
   }
 
   return (
@@ -69,7 +118,7 @@ export default function ProductDetailPage() {
                         <Tractor className="h-8 w-8 text-primary"/>
                         <div>
                             <p className="text-sm text-muted-foreground">Productor</p>
-                            <p className="font-bold">{production.producerName}</p>
+                            <p className="font-bold">{producer?.name}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -86,52 +135,47 @@ export default function ProductDetailPage() {
                             <p className="font-bold">{new Date(production.estimatedHarvestDate).toLocaleDateString('es-CO', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
                         </div>
                     </div>
-                     <div className="flex items-center gap-3">
-                        <Package className="h-8 w-8 text-primary"/>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Rendimiento Proyectado</p>
-                            <p className="font-bold">{production.projectedYield}</p>
-                        </div>
-                    </div>
                 </CardContent>
             </Card>
             
-            <Card className="shadow-lg">
-                <CardHeader>
-                    <CardTitle className="text-3xl">Trazabilidad del Producto</CardTitle>
-                    <CardDescription>Sigue el viaje de tu alimento desde la semilla.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="relative border-l-2 border-primary ml-4 pl-8 space-y-12 py-4">
-                        <div className="absolute -left-4 top-0 h-8 w-8 bg-primary rounded-full flex items-center justify-center">
-                            <Sprout className="h-5 w-5 text-primary-foreground"/>
+            {production.activities && production.activities.length > 0 && (
+                <Card className="shadow-lg">
+                    <CardHeader>
+                        <CardTitle className="text-3xl">Trazabilidad del Producto</CardTitle>
+                        <CardDescription>Sigue el viaje de tu alimento desde la semilla.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="relative border-l-2 border-primary ml-4 pl-8 space-y-12 py-4">
+                            <div className="absolute -left-4 top-0 h-8 w-8 bg-primary rounded-full flex items-center justify-center">
+                                <Sprout className="h-5 w-5 text-primary-foreground"/>
+                            </div>
+                            {production.activities.map((activity) => {
+                                const activityImage = findImage(activity.imageUrl);
+                                return (
+                                    <div key={activity.id} className="relative">
+                                        <div className="absolute -left-[2.1rem] top-1.5 h-4 w-4 bg-background border-2 border-primary rounded-full" />
+                                        <p className="font-bold text-primary">{format(new Date(activity.date), "d 'de' MMMM", {locale: es})}</p>
+                                        <h3 className="text-xl font-semibold mt-1">{activity.description}</h3>
+                                        {activityImage && (
+                                            <Image
+                                                src={activityImage.imageUrl}
+                                                alt={activity.description}
+                                                width={400}
+                                                height={250}
+                                                className="mt-3 rounded-lg shadow-md"
+                                                data-ai-hint={activityImage.imageHint}
+                                            />
+                                        )}
+                                    </div>
+                                )
+                            })}
+                            <div className="absolute -left-4 bottom-0 h-8 w-8 bg-primary rounded-full flex items-center justify-center">
+                                <CheckCircle className="h-5 w-5 text-primary-foreground"/>
+                            </div>
                         </div>
-                        {production.activities.map((activity) => {
-                            const activityImage = findImage(activity.imageUrl);
-                            return (
-                                <div key={activity.id} className="relative">
-                                    <div className="absolute -left-[2.1rem] top-1.5 h-4 w-4 bg-background border-2 border-primary rounded-full" />
-                                    <p className="font-bold text-primary">{new Date(activity.date).toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })}</p>
-                                    <h3 className="text-xl font-semibold mt-1">{activity.description}</h3>
-                                    {activityImage && (
-                                        <Image
-                                            src={activityImage.imageUrl}
-                                            alt={activity.description}
-                                            width={400}
-                                            height={250}
-                                            className="mt-3 rounded-lg shadow-md"
-                                            data-ai-hint={activityImage.imageHint}
-                                        />
-                                    )}
-                                </div>
-                            )
-                        })}
-                        <div className="absolute -left-4 bottom-0 h-8 w-8 bg-primary rounded-full flex items-center justify-center">
-                            <CheckCircle className="h-5 w-5 text-primary-foreground"/>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
+            )}
         </div>
         
         <div className="space-y-8">
@@ -165,8 +209,8 @@ export default function ProductDetailPage() {
                         </Card>
                     </CardContent>
                     <CardFooter>
-                         <Button type="submit" size="lg" className="w-full h-14 text-xl">
-                            <Scale className="mr-3 h-6 w-6"/> Enviar Oferta
+                         <Button type="submit" size="lg" className="w-full h-14 text-xl" disabled={isSubmitting}>
+                            {isSubmitting ? <Loader2 className="animate-spin" /> : <><Scale className="mr-3 h-6 w-6"/> Enviar Oferta</>}
                         </Button>
                     </CardFooter>
                 </form>
