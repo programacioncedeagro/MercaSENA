@@ -25,8 +25,7 @@ export type Production = {
   id: string;
   name: string;
   type: 'Agrícola' | 'Pecuario';
-  productImage: string;
-  icon: LucideIcon;
+  productImage?: string;
   producerName: string;
   location: string;
   area: number; // in hectares for agricultural, or units for livestock
