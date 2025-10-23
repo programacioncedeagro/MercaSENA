@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Leaf, ShoppingCart, Bot, BarChart, User, LucideIcon } from 'lucide-react';
+import { Leaf, ShoppingCart, Bot, BarChart, User, LucideIcon, Package } from 'lucide-react';
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -26,7 +26,7 @@ const producerNavItems: NavItem[] = [
 
 const buyerNavItems: NavItem[] = [
   { href: '/comprador', icon: ShoppingCart, label: 'Mercado', tooltip: 'Mercado' },
-  { href: '/comprador/compras', icon: Leaf, label: 'Mis Compras', tooltip: 'Compras' },
+  { href: '/comprador/compras', icon: Package, label: 'Mis Compras', tooltip: 'Compras' },
 ];
 
 const commonNavItems: NavItem[] = [
@@ -53,7 +53,7 @@ export function DashboardNav() {
         <SidebarMenuItem key={item.href}>
           <Link href={item.href} passHref legacyBehavior>
             <SidebarMenuButton
-              isActive={pathname === item.href || (item.href !== '/productor' && pathname.startsWith(item.href))}
+              isActive={pathname === item.href || (item.href !== '/productor' && item.href !== '/comprador' && pathname.startsWith(item.href))}
               tooltip={{ children: item.tooltip }}
               className={cn("h-14 text-base justify-start")}
             >
