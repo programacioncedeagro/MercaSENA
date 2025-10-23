@@ -11,6 +11,8 @@ export type Activity = {
   imageUrl?: string;
 };
 
+export type OfferStatus = 'pendiente' | 'aceptada' | 'rechazada' | 'negociación';
+
 export type Offer = {
   id: string;
   buyerName: string;
@@ -18,7 +20,7 @@ export type Offer = {
   amount: number;
   pricePerUnit: number;
   deliveryDate: string;
-  status: 'pendiente' | 'aceptada' | 'rechazada' | 'negociación';
+  status: OfferStatus;
 };
 
 export type Production = {
@@ -26,6 +28,7 @@ export type Production = {
   name: string;
   type: 'Agrícola' | 'Pecuario';
   productImage?: string;
+  icon?: LucideIcon;
   producerName: string;
   location: string;
   area: number; // in hectares for agricultural, or units for livestock
