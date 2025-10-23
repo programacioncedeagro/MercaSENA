@@ -33,13 +33,13 @@ export default function Home() {
         </p>
         <div className="mt-8 flex flex-col sm:flex-row gap-6 w-full sm:w-auto">
           <Button asChild size="lg" className="h-16 text-xl w-full sm:w-auto px-10 py-8 rounded-xl shadow-lg transform hover:scale-105 transition-transform">
-            <Link href="/productor">
+            <Link href="/signup">
               <Tractor className="mr-3 h-8 w-8" />
               Soy Productor
             </Link>
           </Button>
           <Button asChild variant="secondary" size="lg" className="h-16 text-xl w-full sm:w-auto px-10 py-8 rounded-xl shadow-lg transform hover:scale-105 transition-transform">
-            <Link href="/comprador">
+            <Link href="/signup">
               <ShoppingCart className="mr-3 h-8 w-8" />
               Soy Comprador
             </Link>
