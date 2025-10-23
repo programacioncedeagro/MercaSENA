@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import type { Production } from '@/lib/types';
-import { Calendar, PlusCircle, TrendingUp, Inbox, Leaf, Drumstick, Loader2 } from 'lucide-react';
+import { Calendar, PlusCircle, TrendingUp, Inbox, Leaf, Drumstick, Loader2, Eye } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { collection, query, where } from 'firebase/firestore';
@@ -108,17 +108,14 @@ export default function ProductionsPage() {
                     <Calendar className="mr-2 h-5 w-5" />
                     <span>Cosecha estimada: <span className="font-bold text-foreground">{new Date(prod.estimatedHarvestDate).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })}</span></span>
                   </div>
-                  <div className="flex items-center text-muted-foreground">
-                    <TrendingUp className="mr-2 h-5 w-5" />
-                    <span>Rendimiento proyectado: <span className="font-bold text-foreground">{prod.projectedYield}</span></span>
-                  </div>
-                   <div className="flex items-center text-muted-foreground">
-                    <Inbox className="mr-2 h-5 w-5" />
-                    <span>Ofertas recibidas: <span className="font-bold text-foreground">{prod.offers?.length || 0}</span></span>
-                  </div>
                 </CardContent>
                 <CardFooter className="p-6 bg-muted/50">
-                  <Button className="w-full h-12 text-lg" variant="secondary">Ver Detalles</Button>
+                   <Button asChild className="w-full h-12 text-lg">
+                      <Link href={`/productor/produccion/${prod.id}`}>
+                        <Eye className="mr-3 h-6 w-6"/>
+                        Ver Detalles
+                      </Link>
+                   </Button>
                 </CardFooter>
               </Card>
             );
