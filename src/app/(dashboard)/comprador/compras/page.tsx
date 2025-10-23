@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 import { Leaf, Calendar, Info, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { collection, query, where, getDocs, doc } from 'firebase/firestore';
-import type { Offer, Production } from "@/lib/types";
+import { collection, query, where, getDoc, doc } from 'firebase/firestore';
+import type { Offer, Production, User } from "@/lib/types";
 import { useEffect, useState } from "react";
 
 const statusStyles = {
@@ -29,51 +29,56 @@ type OfferWithDetails = Offer & {
 export default function MyPurchasesPage() {
     const { user } = useUser();
     const firestore = useFirestore();
-    const [myOffers, setMyOffers] = useState<OfferWithDetails[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [offersWithDetails, setOffersWithDetails] = useState<OfferWithDetails[]>([]);
+    
+    const offersQuery = useMemoFirebase(() => {
+        if (!user || !firestore) return null;
+        return query(collection(firestore, 'offers'), where('buyerId', '==', user.uid));
+    }, [user, firestore]);
+
+    const { data: myOffers, isLoading } = useCollection<Offer>(offersQuery);
 
     useEffect(() => {
-        if (!user || !firestore) return;
+        if (!myOffers || !firestore || !user) return;
 
-        const fetchOffers = async () => {
-            setIsLoading(true);
-            const offersQuery = query(collection(firestore, 'offers'), where('buyerId', '==', user.uid));
-            const offersSnapshot = await getDocs(offersQuery);
-            const offers: OfferWithDetails[] = [];
+        const fetchDetails = async () => {
+            const detailedOffers = await Promise.all(
+                myOffers.map(async (offer) => {
+                    let productName = 'Producto Desconocido';
+                    let producerName = 'Productor Anónimo';
+                    let estimatedHarvestDate = '';
+                    let productImage;
 
-            for (const offerDoc of offersSnapshot.docs) {
-                const offerData = offerDoc.data() as Offer;
-                
-                // Firestore paths can't be fetched directly like this, need to traverse.
-                // This is a simplification. A real app might need a denormalized product reference.
-                try {
-                    const productRef = doc(firestore, `productions/${offerData.productId}`);
-                    const productionDoc = (await getDocs(query(collection(firestore, 'users').withConverter({fromFirestore: (snapshot): {id: string, name: string} => ({id: snapshot.id, name: snapshot.data().name}), toFirestore: (model) => model}), where('__name__', '==', offerData.producerId)))).docs[0];
+                    try {
+                        // Fetch producer name
+                        const producerRef = doc(firestore, `users/${offer.producerId}`);
+                        const producerSnap = await getDoc(producerRef);
+                        if (producerSnap.exists()) {
+                            producerName = (producerSnap.data() as User).name;
+                        }
 
-                    const productionSnap = await getDocs(query(collection(firestore, `users/${productionDoc.id}/productions`), where('__name__', '==', offerData.productId)));
-                    if (!productionSnap.empty) {
-                        const productionData = productionSnap.docs[0].data() as Production;
-                         offers.push({
-                            ...offerData,
-                            id: offerDoc.id,
-                            productName: productionData.name,
-                            productImage: productionData.productImage,
-                            producerName: productionDoc.data().name,
-                            estimatedHarvestDate: productionData.estimatedHarvestDate,
-                        });
+                        // Fetch production details
+                        const productRef = doc(firestore, `users/${offer.producerId}/productions/${offer.productId}`);
+                        const productSnap = await getDoc(productRef);
+                        if (productSnap.exists()) {
+                            const productData = productSnap.data() as Production;
+                            productName = productData.name;
+                            estimatedHarvestDate = productData.estimatedHarvestDate;
+                            productImage = productData.productImage;
+                        }
+
+                    } catch (e) {
+                        console.error("Error fetching details for offer:", e);
                     }
-                } catch(e) {
-                    console.error("Error fetching related product data for offer:", e)
-                }
-            }
-            
-            setMyOffers(offers);
-            setIsLoading(false);
+                    return { ...offer, productName, producerName, estimatedHarvestDate, productImage };
+                })
+            );
+            setOffersWithDetails(detailedOffers);
         };
 
-        fetchOffers();
+        fetchDetails();
 
-    }, [user, firestore]);
+    }, [myOffers, firestore, user]);
 
     if (isLoading) {
         return <div className="flex justify-center items-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
@@ -87,19 +92,19 @@ export default function MyPurchasesPage() {
             </div>
 
              <div className="space-y-6">
-                {myOffers.length > 0 ? myOffers.map(offer => {
-                    const productImage = PlaceHolderImages.find(p => p.imageUrl === offer.productImage);
+                {offersWithDetails.length > 0 ? offersWithDetails.map(offer => {
+                    const productImageData = PlaceHolderImages.find(p => p.imageUrl === offer.productImage);
                     return (
                         <Card key={offer.id} className="shadow-lg hover:shadow-xl transition-shadow flex flex-col sm:flex-row overflow-hidden">
-                           {productImage && (
+                           {productImageData && (
                                 <div className="relative sm:w-1/3">
                                     <Image 
-                                        src={productImage.imageUrl}
+                                        src={productImageData.imageUrl}
                                         alt={offer.productName}
                                         width={400}
                                         height={400}
                                         className="object-cover w-full h-48 sm:h-full"
-                                        data-ai-hint={productImage.imageHint}
+                                        data-ai-hint={productImageData.imageHint}
                                     />
                                 </div>
                            )}
@@ -121,7 +126,7 @@ export default function MyPurchasesPage() {
                                 <CardContent className="grid sm:grid-cols-2 gap-4 text-lg">
                                     <div>
                                         <p className="text-sm text-muted-foreground">Cantidad Ofertada</p>
-                                        <p className="font-bold">{offer.pricePerUnit} kg</p>
+                                        <p className="font-bold">{offer.amount} kg</p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-muted-foreground">Precio Ofertado/kg</p>
