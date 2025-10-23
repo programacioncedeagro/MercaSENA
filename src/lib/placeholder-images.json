@@ -1,3 +1,58 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-background",
+      "description": "A lush green field under a bright sky, representing agriculture.",
+      "imageUrl": "https://images.unsplash.com/uploads/1412026095116d2b0c90e/3bf33993?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxncmVlbiUyMGZpZWxkfGVufDB8fHx8MTc2MTIxMDkyMHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "green field"
+    },
+    {
+      "id": "tomato-crop-1",
+      "description": "Vibrant red tomatoes growing on the vine.",
+      "imageUrl": "https://images.unsplash.com/photo-1635786345858-9f65f0d3b06d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8dG9tYXRvJTIwcGxhbnRzfGVufDB8fHx8MTc2MTIzNDk0NXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "tomato plants"
+    },
+    {
+      "id": "tomato-crop-2",
+      "description": "Green, unripe tomatoes on the plant.",
+      "imageUrl": "https://images.unsplash.com/photo-1634802737014-837950a91857?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxncmVlbiUyMHRvbWF0b2VzfGVufDB8fHx8MTc2MTIzNDk0NHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "green tomatoes"
+    },
+    {
+      "id": "lettuce-crop-1",
+      "description": "A field of fresh, green lettuce.",
+      "imageUrl": "https://images.unsplash.com/photo-1672556888087-e0fed3c2aeb7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxsZXR0dWNlJTIwZmllbGR8ZW58MHx8fHwxNzYxMjI0MjkyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "lettuce field"
+    },
+    {
+      "id": "poultry-farm-1",
+      "description": "Chickens in a clean, free-range environment.",
+      "imageUrl": "https://images.unsplash.com/photo-1617457563998-bbfd377c6751?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxjaGlja2VucyUyMGZhcm18ZW58MHx8fHwxNzYxMjM0OTQ0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "chickens farm"
+    },
+    {
+      "id": "farmer-profile-1",
+      "description": "Portrait of an experienced male farmer smiling.",
+      "imageUrl": "https://images.unsplash.com/photo-1655979911088-5d956bc1853c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxmYXJtZXIlMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjExNjM4MTN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "farmer portrait"
+    },
+    {
+      "id": "farmer-profile-2",
+      "description": "Portrait of a female farmer in her field.",
+      "imageUrl": "https://images.unsplash.com/photo-1616672239881-aec9f3f43521?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHx3b21hbiUyMGZhcm1lcnxlbnwwfHx8fDE3NjExNTE5NTR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman farmer"
+    },
+    {
+      "id": "production-timeline-1",
+      "description": "A small sprout emerging from the soil.",
+      "imageUrl": "https://images.unsplash.com/photo-1742220941595-3a26e148da6d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxwbGFudCUyMHNwcm91dHxlbnwwfHx8fDE3NjEyMTkyNDB8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "plant sprout"
+    },
+    {
+      "id": "traceability-banner",
+      "description": "A hand holding a smartphone scanning a QR code on a fresh vegetable.",
+      "imageUrl": "https://images.unsplash.com/photo-1685575112975-75d7c15f5c5e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzY2FuJTIwcXJjb2RlfGVufDB8fHx8MTc2MTE2ODE4OXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "scan qrcode"
+    }
+  ]
 }
