@@ -1,6 +1,7 @@
 'use client';
 
-import { useState }mport { Button } from '@/components/ui/button';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,7 +41,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
-            <Logo className="w-20 h-20 mx-auto mb-4 text-primary" />
+            <Logo className="w-48 h-auto mx-auto mb-4" />
           <CardTitle className="text-4xl">Iniciar Sesión</CardTitle>
           <CardDescription>Bienvenido de nuevo a AgroFuturos Conecta.</CardDescription>
         </CardHeader>

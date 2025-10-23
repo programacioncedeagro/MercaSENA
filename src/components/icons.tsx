@@ -17,6 +17,38 @@ export function AgroLogoIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+
+export function CampeSenaLogo(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 200 70" xmlns="http://www.w3.org/2000/svg" {...props}>
+      <g>
+        {/* Logo Drop */}
+        <path 
+          d="M35,60 C5,40 5,15 35,2.5 C65,15 65,40 35,60 Z"
+          stroke="#3fa34d" 
+          strokeWidth="2"
+          fill="none"
+        />
+        {/* Heart/Leaves */}
+        <path d="M35,42 C25,30 35,20 35,20" stroke="#3fa34d" fill="#3fa34d" strokeWidth="1" />
+        <path d="M35,42 C45,30 35,20 35,20" stroke="#8b448b" fill="#8b448b" strokeWidth="1" />
+        {/* Sun */}
+        <circle cx="35" cy="15" r="4" fill="#f3b719" />
+      </g>
+      <text x="70" y="32" fontFamily="sans-serif" fontSize="24" fontWeight="bold">
+        <tspan fill="#8b448b">Campe</tspan>
+        <tspan fill="#3fa34d">SENA</tspan>
+      </text>
+      <text x="70" y="55" fontFamily="sans-serif" fontSize="14" fontWeight="bold" fill="#8b448b">
+        ¡Una Esperanza Devida!
+      </text>
+      {/* Checkmark */}
+      <path d="M140 45 l5 5 l10 -10" stroke="#3fa34d" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+// Kept for reference, but CampeSenaLogo should be used.
 export function AgroFuturosLogo(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" {...props}>

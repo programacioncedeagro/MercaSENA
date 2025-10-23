@@ -91,8 +91,7 @@ export default function DashboardLayout({
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2 p-2">
-            <Logo className="w-10 h-10 text-primary" />
-            <h2 className="text-xl font-bold tracking-tight">AgroFuturos</h2>
+            <Logo className="w-32 h-auto" />
           </div>
         </SidebarHeader>
         <SidebarContent>

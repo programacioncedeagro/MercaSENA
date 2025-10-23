@@ -23,7 +23,7 @@ export default function Home() {
       <div className="absolute inset-0 bg-background/60 backdrop-blur-sm -z-10" />
 
       <div className="flex flex-col items-center justify-center bg-card/80 p-8 md:p-12 rounded-2xl shadow-2xl max-w-2xl">
-        <Logo className="w-24 h-24 mb-4 text-primary" />
+        <Logo className="w-64 h-auto mb-4" />
 
         <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-foreground">
           AgroFuturos Conecta

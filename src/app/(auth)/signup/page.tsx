@@ -67,7 +67,7 @@ export default function SignupPage() {
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
-          <Logo className="w-20 h-20 mx-auto mb-4 text-primary" />
+          <Logo className="w-48 h-auto mx-auto mb-4" />
           <CardTitle className="text-4xl">Crear Cuenta</CardTitle>
           <CardDescription>Únete a la revolución del agro.</CardDescription>
         </CardHeader>
