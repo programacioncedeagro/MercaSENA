@@ -163,7 +163,7 @@ export default function NewProductionPage() {
             <CardDescription>
               Usa nuestra inteligencia artificial para estimar la fecha de cosecha.
             </CardDescription>
-          </CardHeader>
+          </Header>
           <CardContent className="space-y-6">
             <Button
               onClick={handleEstimate}

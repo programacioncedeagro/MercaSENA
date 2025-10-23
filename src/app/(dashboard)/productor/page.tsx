@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Leaf, DollarSign, MessageSquare } from 'lucide-react';
+import { Leaf, DollarSign, MessageSquare } from 'lucide-react';
 import { mockProductions } from '@/lib/data';
 import { Offer } from '@/lib/types';
 

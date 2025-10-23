@@ -9,7 +9,6 @@ import {
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
-import { Logo } from './logo';
 
 type NavItem = {
   href: string;
