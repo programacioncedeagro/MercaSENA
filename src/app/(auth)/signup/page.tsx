@@ -7,10 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import Link from 'next/link';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Tractor, ShoppingCart } from 'lucide-react';
@@ -43,14 +42,17 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      const userDocRef = doc(firestore, 'users', user.uid);
-      
-      setDocumentNonBlocking(userDocRef, {
-        id: user.uid,
-        name,
-        email,
-        role,
-      }, { merge: true });
+      if (user) {
+        const userDocRef = doc(firestore, 'users', user.uid);
+        
+        // Use the non-blocking update function and don't await it
+        setDocumentNonBlocking(userDocRef, {
+          id: user.uid,
+          name,
+          email,
+          role,
+        }, { merge: true });
+      }
 
       // Redirect is handled by layout
     } catch (error: any) {
