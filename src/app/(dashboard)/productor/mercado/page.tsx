@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Leaf, Check, X, MessageCircle, Loader2 } from "lucide-react";
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, getDoc } from 'firebase/firestore';
-import type { Offer, Production } from "@/lib/types";
+import { useFirestore, useUser, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, doc, getDoc, getDocs } from 'firebase/firestore';
+import type { Offer, Production, User } from "@/lib/types";
 import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const statusStyles = {
     pendiente: 'bg-yellow-100 text-yellow-800 border-yellow-300',
@@ -22,6 +23,7 @@ type OfferWithDetails = Offer & { productName: string };
 export default function ProducerMarketPage() {
     const { user } = useUser();
     const firestore = useFirestore();
+    const { toast } = useToast();
     
     const offersQuery = useMemoFirebase(() => {
         if (!user || !firestore) return null;
@@ -34,25 +36,45 @@ export default function ProducerMarketPage() {
     useEffect(() => {
         if (!offers || !firestore || !user) return;
 
-        const fetchProductDetails = async () => {
+        const fetchProductAndBuyerDetails = async () => {
             const detailedOffers = await Promise.all(
                 offers.map(async (offer) => {
+                    let productName = 'Producto Desconocido';
+                    let buyerName = 'Comprador Anónimo';
                     try {
                         const productRef = doc(firestore, `users/${user.uid}/productions/${offer.productId}`);
                         const productSnap = await getDoc(productRef);
-                        const productName = productSnap.exists() ? (productSnap.data() as Production).name : 'Producto Desconocido';
-                        return { ...offer, productName };
+                        if (productSnap.exists()) {
+                            productName = (productSnap.data() as Production).name;
+                        }
+
+                        const buyerRef = doc(firestore, `users/${offer.buyerId}`);
+                        const buyerSnap = await getDoc(buyerRef);
+                        if (buyerSnap.exists()) {
+                            buyerName = (buyerSnap.data() as User).name;
+                        }
+                        
                     } catch (e) {
-                        console.error("Error fetching product name for offer:", e);
-                        return { ...offer, productName: 'Error al cargar' };
+                        console.error("Error fetching details for offer:", e);
                     }
+                    return { ...offer, productName, buyerName };
                 })
             );
             setOffersWithDetails(detailedOffers);
         };
 
-        fetchProductDetails();
+        fetchProductAndBuyerDetails();
     }, [offers, firestore, user]);
+
+    const handleOfferStatusChange = (offerId: string, status: 'aceptada' | 'rechazada') => {
+        if (!firestore) return;
+        const offerRef = doc(firestore, 'offers', offerId);
+        updateDocumentNonBlocking(offerRef, { status });
+        toast({
+            title: `Oferta ${status}`,
+            description: `La oferta ha sido marcada como ${status}.`,
+        });
+    }
 
     return (
         <div className="flex flex-col gap-8">
@@ -74,7 +96,7 @@ export default function ProducerMarketPage() {
                                             <Leaf className="text-primary h-6 w-6"/>
                                             Oferta para {offer.productName}
                                         </CardTitle>
-                                        <CardDescription>De: {offer.buyerName || "Comprador Anónimo"}</CardDescription>
+                                        <CardDescription>De: {offer.buyerName}</CardDescription>
                                     </div>
                                     <Badge className={cn("text-sm capitalize", statusStyles[offer.status])}>
                                         {offer.status}
@@ -95,17 +117,19 @@ export default function ProducerMarketPage() {
                                     <p className="font-bold">{new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(offer.amount * offer.pricePerUnit)}</p>
                                 </div>
                             </CardContent>
-                            <CardFooter className="flex flex-wrap gap-4">
-                                <Button size="lg" className="h-12 text-lg flex-grow sm:flex-grow-0">
-                                    <Check className="mr-2 h-5 w-5"/> Aceptar
-                                </Button>
-                                <Button size="lg" variant="secondary" className="h-12 text-lg flex-grow sm:flex-grow-0">
-                                    <MessageCircle className="mr-2 h-5 w-5"/> Negociar
-                                </Button>
-                                <Button size="lg" variant="destructive" className="h-12 text-lg flex-grow sm:flex-grow-0">
-                                    <X className="mr-2 h-5 w-5"/> Rechazar
-                                </Button>
-                            </CardFooter>
+                            {offer.status === 'pendiente' && (
+                                <CardFooter className="flex flex-wrap gap-4">
+                                    <Button size="lg" className="h-12 text-lg flex-grow sm:flex-grow-0" onClick={() => handleOfferStatusChange(offer.id, 'aceptada')}>
+                                        <Check className="mr-2 h-5 w-5"/> Aceptar
+                                    </Button>
+                                    <Button size="lg" variant="secondary" className="h-12 text-lg flex-grow sm:flex-grow-0" disabled>
+                                        <MessageCircle className="mr-2 h-5 w-5"/> Negociar
+                                    </Button>
+                                    <Button size="lg" variant="destructive" className="h-12 text-lg flex-grow sm:flex-grow-0" onClick={() => handleOfferStatusChange(offer.id, 'rechazada')}>
+                                        <X className="mr-2 h-5 w-5"/> Rechazar
+                                    </Button>
+                                </CardFooter>
+                            )}
                         </Card>
                     )) : (
                         <Card className="text-center p-12">

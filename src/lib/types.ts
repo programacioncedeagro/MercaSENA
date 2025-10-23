@@ -2,6 +2,13 @@ import type { LucideIcon } from 'lucide-react';
 
 export type UserRole = 'productor' | 'comprador';
 
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+}
+
 export type ProductionStatus = 'Planeación' | 'Siembra' | 'Crecimiento' | 'Mantenimiento' | 'Cosecha' | 'Postcosecha';
 
 export type Activity = {
@@ -25,6 +32,7 @@ export type Offer = {
   createdAt: string;
   // Denormalized fields for easier display
   buyerName?: string; 
+  producerName?: string;
 };
 
 export type Production = {
@@ -39,7 +47,8 @@ export type Production = {
   status: ProductionStatus;
   progress: number;
   estimatedHarvestDate: string;
-  // projectedYield: string; // This can be added later as a feature
-  activities: Activity[];
-  traceabilityId: string;
+  projectedYield?: string;
+  activities?: Activity[];
+  traceabilityId?: string;
+  offers?: Offer[]; // This might be populated from a sub-collection or separate query
 };
