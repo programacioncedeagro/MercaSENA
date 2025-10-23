@@ -1,14 +1,68 @@
-import { notFound } from 'next/navigation';
-import { mockProductions } from '@/lib/data';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useParams, notFound } from 'next/navigation';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Calendar, MapPin, Leaf, Sprout, Tractor, Package } from 'lucide-react';
+import { CheckCircle, Calendar, MapPin, Leaf, Sprout, Tractor, Package, Loader2 } from 'lucide-react';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import type { Production, User } from '@/lib/types';
+import { collectionGroup, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 
-export default function TraceabilityPage({ params }: { params: { id: string } }) {
-  const production = mockProductions.find(p => p.traceabilityId === params.id);
+export default function TraceabilityPage() {
+  const params = useParams();
+  const productionId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const firestore = useFirestore();
 
-  if (!production) {
+  const [production, setProduction] = useState<Production | null>(null);
+  const [producer, setProducer] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!firestore || !productionId) return;
+
+    const fetchProduction = async () => {
+      setIsLoading(true);
+      
+      const productionsRef = collectionGroup(firestore, 'productions');
+      const q = query(productionsRef, where('__name__', '==', `users/${productionId.split('_')[0]}/productions/${productionId.split('_')[1]}`));
+      
+      try {
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          const docSnapshot = querySnapshot.docs[0];
+          const prodData = { ...docSnapshot.data(), id: docSnapshot.id } as Production;
+          setProduction(prodData);
+          
+          if(prodData.producerId) {
+             const producerRef = doc(firestore, 'users', prodData.producerId);
+             const producerSnap = await getDoc(producerRef);
+             if(producerSnap.exists()){
+                 setProducer(producerSnap.data() as User);
+             }
+          }
+
+        } else {
+           setProduction(null);
+        }
+      } catch (error) {
+        console.error("Error fetching traceability data:", error);
+        setProduction(null);
+      } finally {
+         setIsLoading(false);
+      }
+    };
+
+    fetchProduction();
+  }, [firestore, productionId]);
+
+  if (isLoading) {
+    return <div className="flex h-screen items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /></div>;
+  }
+
+  if (!production || !producer) {
     return notFound();
   }
 
@@ -51,7 +105,7 @@ export default function TraceabilityPage({ params }: { params: { id: string } })
               <Tractor className="h-8 w-8 text-primary"/>
               <div>
                 <p className="text-sm text-muted-foreground">Productor</p>
-                <p className="font-bold">{production.producerName}</p>
+                <p className="font-bold">{producer.name}</p>
               </div>
             </div>
              <div className="flex items-center gap-3">
@@ -65,7 +119,7 @@ export default function TraceabilityPage({ params }: { params: { id: string } })
               <Calendar className="h-8 w-8 text-primary"/>
               <div>
                 <p className="text-sm text-muted-foreground">Siembra</p>
-                <p className="font-bold">{new Date(production.startDate).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                <p className="font-bold">{new Date(production.plantingDate).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
               </div>
             </div>
              <div className="flex items-center gap-3">
@@ -87,10 +141,10 @@ export default function TraceabilityPage({ params }: { params: { id: string } })
                      <div className="absolute -left-4 top-0 h-8 w-8 bg-primary rounded-full flex items-center justify-center">
                         <Sprout className="h-5 w-5 text-primary-foreground"/>
                     </div>
-                    {production.activities.map((activity, index) => {
+                    {production.activities?.map((activity, index) => {
                         const activityImage = findImage(activity.imageUrl);
                         return (
-                             <div key={activity.id} className="relative">
+                             <div key={index} className="relative">
                                 <div className="absolute -left-[2.1rem] top-1.5 h-4 w-4 bg-background border-2 border-primary rounded-full" />
                                 <p className="font-bold text-primary">{new Date(activity.date).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                                 <h3 className="text-xl font-headline font-semibold mt-1">{activity.description}</h3>

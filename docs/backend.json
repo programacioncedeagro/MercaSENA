@@ -167,22 +167,17 @@
     ]
   },
   "firestore": {
-    "collections": [
-      {
-        "path": "/users/{userId}",
-        "schema": "User",
-        "description": "Stores user profiles including their role."
-      },
-      {
-        "path": "/users/{userId}/productions/{productionId}",
-        "schema": "Production",
-        "description": "Subcollection storing production records for each user."
-      },
-      {
-        "path": "/offers/{offerId}",
-        "schema": "Offer",
-        "description": "Root collection for all offers. Contains producerId and buyerId for easy querying."
-      }
-    ]
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Stores user profiles including their role."
+    },
+    "/users/{userId}/productions/{productionId}": {
+      "schema": "Production",
+      "description": "Subcollection storing production records for each user."
+    },
+    "/offers/{offerId}": {
+      "schema": "Offer",
+      "description": "Root collection for all offers. Contains producerId and buyerId for easy querying."
+    }
   }
 }
