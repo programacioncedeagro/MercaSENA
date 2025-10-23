@@ -20,7 +20,7 @@ export function AgroLogoIcon(props: SVGProps<SVGSVGElement>) {
 
 export function CampeSenaLogo(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 200 70" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <svg viewBox="0 0 240 70" xmlns="http://www.w3.org/2000/svg" {...props}>
       <g>
         {/* Logo Drop */}
         <path 
