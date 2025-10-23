@@ -68,7 +68,7 @@ export default function AIAssistantPage() {
       toast({
         variant: "destructive",
         title: "Error del Asistente",
-        description: "No se pudo obtener una respuesta. Inténtalo de nuevo.",
+        description: result.error || "No se pudo obtener una respuesta. Inténtalo de nuevo.",
       });
       // Optionally remove the user's message if the call fails
       setMessages(messages);

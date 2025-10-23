@@ -9,9 +9,9 @@ export async function getRecommendationAction(input: CropRecommendationInput) {
     // In a real app, you'd add user authentication/authorization checks here.
     const result = await getCropRecommendation(input);
     return { success: true, data: result };
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    return { success: false, error: 'Failed to get recommendation.' };
+    return { success: false, error: error.message || 'Failed to get recommendation.' };
   }
 }
 
@@ -20,8 +20,8 @@ export async function getHarvestEstimateAction(input: ProjectedHarvestEstimatesI
     // In a real app, you'd add user authentication/authorization checks here.
     const result = await projectedHarvestEstimates(input);
     return { success: true, data: result };
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    return { success: false, error: 'Failed to estimate harvest date.' };
+    return { success: false, error: error.message || 'Failed to estimate harvest date.' };
   }
 }
