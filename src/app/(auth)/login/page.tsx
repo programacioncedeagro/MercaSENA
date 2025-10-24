@@ -54,7 +54,7 @@ export default function LoginPage() {
         title: 'Error al iniciar sesión',
         description: errorMessage,
       });
-      setIsLoading(false);
+      setIsLoading(false); // This was the missing piece
     }
   };
 
