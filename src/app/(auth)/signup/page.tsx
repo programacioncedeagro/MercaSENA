@@ -1,6 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useForm, type SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,55 +13,64 @@ import Link from 'next/link';
 import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Tractor, ShoppingCart } from 'lucide-react';
 import { Logo } from '@/components/logo';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+const signupSchema = z.object({
+  name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
+  email: z.string().email({ message: 'Por favor, introduce un correo electrónico válido.' }),
+  password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres.' }),
+  role: z.enum(['producer', 'buyer'], {
+    required_error: 'Debes seleccionar un rol.',
+  }),
+});
+
+type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'producer' | 'buyer' | ''>('');
   const [isLoading, setIsLoading] = useState(false);
   
   const auth = useAuth();
   const firestore = useFirestore();
-  const router = useRouter();
   const { toast } = useToast();
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!role) {
-      toast({
-        variant: 'destructive',
-        title: 'Rol no seleccionado',
-        description: 'Por favor, elige si eres Productor o Comprador.',
-      });
-      return;
-    }
+  const form = useForm<SignupFormValues>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+    },
+  });
+
+  const onSubmit: SubmitHandler<SignupFormValues> = async (data) => {
     setIsLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
       if (user) {
         const userDocRef = doc(firestore, 'users', user.uid);
         
-        setDocumentNonBlocking(userDocRef, {
+        await setDocumentNonBlocking(userDocRef, {
           id: user.uid,
-          name,
-          email,
-          role: role,
+          name: data.name,
+          email: data.email,
+          role: data.role,
         }, { merge: true });
       }
-
       // Redirect is handled by layout
     } catch (error: any) {
+      let errorMessage = 'No se pudo crear la cuenta. Inténtalo de nuevo.';
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'Este correo electrónico ya está registrado.';
+      }
       toast({
         variant: 'destructive',
         title: 'Error en el registro',
-        description: error.message || 'No se pudo crear la cuenta.',
+        description: errorMessage,
       });
       setIsLoading(false);
     }
@@ -73,45 +85,92 @@ export default function SignupPage() {
           <CardDescription>Únete a la revolución del agro.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSignup} className="space-y-6">
-            <div className="space-y-2">
-                <Label>¿Cuál es tu rol?</Label>
-                <RadioGroup
-                    value={role}
-                    onValueChange={(value: 'producer' | 'buyer') => setRole(value)}
-                    className="grid grid-cols-2 gap-4"
-                >
-                    <Label className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
-                        <RadioGroupItem value="producer" id="productor" className="sr-only" />
-                        <Tractor className="mb-3 h-8 w-8" />
-                        Productor
-                    </Label>
-                    <Label className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
-                        <RadioGroupItem value="buyer" id="comprador" className="sr-only" />
-                        <ShoppingCart className="mb-3 h-8 w-8" />
-                        Comprador
-                    </Label>
-                </RadioGroup>
-            </div>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>¿Cuál es tu rol?</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="grid grid-cols-2 gap-4"
+                      >
+                        <FormItem>
+                          <FormControl>
+                            <RadioGroupItem value="producer" id="productor" className="sr-only" />
+                          </FormControl>
+                          <Label htmlFor="productor" className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                            <Tractor className="mb-3 h-8 w-8" />
+                            Productor
+                          </Label>
+                        </FormItem>
+                        <FormItem>
+                          <FormControl>
+                            <RadioGroupItem value="buyer" id="comprador" className="sr-only" />
+                          </FormControl>
+                           <Label htmlFor="comprador" className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                            <ShoppingCart className="mb-3 h-8 w-8" />
+                            Comprador
+                          </Label>
+                        </FormItem>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre Completo</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
-            </div>
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nombre Completo</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Correo Electrónico</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </div>
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Correo Electrónico</FormLabel>
+                    <FormControl>
+                      <Input type="email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-            </div>
-            <Button type="submit" className="w-full h-12 text-lg" disabled={isLoading}>
-              {isLoading ? <Loader2 className="animate-spin" /> : 'Crear mi cuenta'}
-            </Button>
-          </form>
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contraseña</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <Button type="submit" className="w-full h-12 text-lg" disabled={isLoading}>
+                {isLoading ? <Loader2 className="animate-spin" /> : 'Crear mi cuenta'}
+              </Button>
+            </form>
+          </Form>
           <div className="mt-6 text-center text-sm">
             ¿Ya tienes una cuenta?{' '}
             <Link href="/login" className="font-bold text-primary hover:underline">
