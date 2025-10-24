@@ -2,6 +2,10 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
+  pageExtensions: ['tsx', 'ts'],
+  experimental: {
+    appDir: true,
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
