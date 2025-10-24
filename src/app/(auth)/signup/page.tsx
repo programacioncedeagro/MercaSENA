@@ -52,16 +52,17 @@ export default function SignupPage() {
       const user = userCredential.user;
 
       // 2. Crear el documento de usuario en Firestore
-      if (user) {
-        const userDocRef = doc(firestore, 'users', user.uid);
-        await setDoc(userDocRef, {
-          id: user.uid,
-          name: data.name,
-          email: data.email,
-          role: data.role,
-        }, { merge: true });
-      }
+      const userDocRef = doc(firestore, 'users', user.uid);
+      await setDoc(userDocRef, {
+        id: user.uid,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+      });
+
       // La redirección es manejada por el layout al detectar el cambio de estado de autenticación.
+      // No es necesario hacer nada más aquí.
+
     } catch (error: any) {
       let errorMessage = 'No se pudo crear la cuenta. Por favor, intenta de nuevo.';
       if (error.code === 'auth/email-already-in-use') {

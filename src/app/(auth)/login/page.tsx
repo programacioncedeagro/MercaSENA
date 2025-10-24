@@ -42,7 +42,8 @@ export default function LoginPage() {
       // La redirección es manejada por el layout al detectar el cambio de estado de autenticación.
     } catch (error: any) {
       let errorMessage = 'No se pudo iniciar sesión. Por favor, intenta de nuevo.';
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+      // auth/invalid-credential es el código de error más común para email/contraseña incorrectos.
+      if (error.code === 'auth/invalid-credential') {
         errorMessage = 'El correo o la contraseña son incorrectos.';
       }
       
