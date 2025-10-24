@@ -45,12 +45,11 @@ export default function SignupPage() {
       if (user) {
         const userDocRef = doc(firestore, 'users', user.uid);
         
-        // Use the non-blocking update function and don't await it
         setDocumentNonBlocking(userDocRef, {
           id: user.uid,
           name,
           email,
-          role,
+          role: role,
         }, { merge: true });
       }
 
