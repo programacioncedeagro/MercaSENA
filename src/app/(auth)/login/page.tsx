@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm, type SubmitHandler } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/logo';
@@ -26,7 +25,6 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const auth = useAuth();
-  const router = useRouter();
   const { toast } = useToast();
 
   const form = useForm<LoginFormValues>({
@@ -37,14 +35,13 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit: SubmitHandler<LoginFormValues> = async (data) => {
+  const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
-      // The redirect is handled by the layout's onAuthStateChanged listener.
+      // La redirección es manejada por el layout al detectar el cambio de estado de autenticación.
     } catch (error: any) {
-      let errorMessage = 'No se pudo iniciar sesión. Inténtalo de nuevo.';
-      // https://firebase.google.com/docs/auth/admin/errors
+      let errorMessage = 'No se pudo iniciar sesión. Por favor, intenta de nuevo.';
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         errorMessage = 'El correo o la contraseña son incorrectos.';
       }
@@ -54,7 +51,8 @@ export default function LoginPage() {
         title: 'Error al iniciar sesión',
         description: errorMessage,
       });
-      setIsLoading(false); // This was the missing piece
+    } finally {
+      setIsLoading(false);
     }
   };
 

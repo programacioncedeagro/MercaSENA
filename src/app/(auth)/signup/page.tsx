@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm, type SubmitHandler } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -9,9 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import Link from 'next/link';
-import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Tractor, ShoppingCart } from 'lucide-react';
 import { Logo } from '@/components/logo';
@@ -44,25 +44,26 @@ export default function SignupPage() {
     },
   });
 
-  const onSubmit: SubmitHandler<SignupFormValues> = async (data) => {
+  const onSubmit = async (data: SignupFormValues) => {
     setIsLoading(true);
     try {
+      // 1. Crear el usuario en Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
+      // 2. Crear el documento de usuario en Firestore
       if (user) {
         const userDocRef = doc(firestore, 'users', user.uid);
-        
-        await setDocumentNonBlocking(userDocRef, {
+        await setDoc(userDocRef, {
           id: user.uid,
           name: data.name,
           email: data.email,
           role: data.role,
         }, { merge: true });
       }
-      // Redirect is handled by layout
+      // La redirección es manejada por el layout al detectar el cambio de estado de autenticación.
     } catch (error: any) {
-      let errorMessage = 'No se pudo crear la cuenta. Inténtalo de nuevo.';
+      let errorMessage = 'No se pudo crear la cuenta. Por favor, intenta de nuevo.';
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'Este correo electrónico ya está registrado.';
       }
@@ -71,7 +72,8 @@ export default function SignupPage() {
         title: 'Error en el registro',
         description: errorMessage,
       });
-      setIsLoading(false);
+    } finally {
+        setIsLoading(false);
     }
   };
 
