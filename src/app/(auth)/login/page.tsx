@@ -7,7 +7,6 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -45,6 +44,7 @@ export default function LoginPage() {
       // The redirect is handled by the layout's onAuthStateChanged listener.
     } catch (error: any) {
       let errorMessage = 'No se pudo iniciar sesión. Inténtalo de nuevo.';
+      // https://firebase.google.com/docs/auth/admin/errors
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         errorMessage = 'El correo o la contraseña son incorrectos.';
       }

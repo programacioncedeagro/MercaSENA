@@ -7,7 +7,6 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import Link from 'next/link';
 import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
@@ -16,7 +15,7 @@ import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Tractor, ShoppingCart } from 'lucide-react';
 import { Logo } from '@/components/logo';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 const signupSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -103,19 +102,19 @@ export default function SignupPage() {
                           <FormControl>
                             <RadioGroupItem value="producer" id="productor" className="sr-only" />
                           </FormControl>
-                          <Label htmlFor="productor" className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                          <FormLabel htmlFor="productor" className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
                             <Tractor className="mb-3 h-8 w-8" />
                             Productor
-                          </Label>
+                          </FormLabel>
                         </FormItem>
                         <FormItem>
                           <FormControl>
                             <RadioGroupItem value="buyer" id="comprador" className="sr-only" />
                           </FormControl>
-                           <Label htmlFor="comprador" className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                           <FormLabel htmlFor="comprador" className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
                             <ShoppingCart className="mb-3 h-8 w-8" />
                             Comprador
-                          </Label>
+                          </FormLabel>
                         </FormItem>
                       </RadioGroup>
                     </FormControl>
