@@ -19,7 +19,7 @@ export default function SignupPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'productor' | 'comprador' | ''>('');
+  const [role, setRole] = useState<'producer' | 'buyer' | ''>('');
   const [isLoading, setIsLoading] = useState(false);
   
   const auth = useAuth();
@@ -79,16 +79,16 @@ export default function SignupPage() {
                 <Label>¿Cuál es tu rol?</Label>
                 <RadioGroup
                     value={role}
-                    onValueChange={(value: 'productor' | 'comprador') => setRole(value)}
+                    onValueChange={(value: 'producer' | 'buyer') => setRole(value)}
                     className="grid grid-cols-2 gap-4"
                 >
                     <Label className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
-                        <RadioGroupItem value="productor" id="productor" className="sr-only" />
+                        <RadioGroupItem value="producer" id="productor" className="sr-only" />
                         <Tractor className="mb-3 h-8 w-8" />
                         Productor
                     </Label>
                     <Label className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
-                        <RadioGroupItem value="comprador" id="comprador" className="sr-only" />
+                        <RadioGroupItem value="buyer" id="comprador" className="sr-only" />
                         <ShoppingCart className="mb-3 h-8 w-8" />
                         Comprador
                     </Label>

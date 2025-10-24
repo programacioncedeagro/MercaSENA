@@ -52,9 +52,9 @@ export default function DashboardLayout({
       const isProducerPath = pathname.startsWith('/productor');
       const isBuyerPath = pathname.startsWith('/comprador');
 
-      if (userRole === 'productor' && !isProducerPath) {
+      if (userRole === 'producer' && !isProducerPath) {
         router.replace('/productor');
-      } else if (userRole === 'comprador' && !isBuyerPath) {
+      } else if (userRole === 'buyer' && !isBuyerPath) {
         router.replace('/comprador');
       }
     }
