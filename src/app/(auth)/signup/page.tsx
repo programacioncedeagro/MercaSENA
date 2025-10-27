@@ -45,34 +45,21 @@ export default function SignupPage() {
   });
 
   const onSubmit = async (data: SignupFormValues) => {
-    console.log('Signup attempt with:', data);
     setIsLoading(true);
     try {
-      // 1. Crear el usuario en Firebase Auth
-      console.log('Attempting to create user in Firebase Auth...');
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
-      console.log('Firebase Auth user created:', user.uid);
 
-      // 2. Crear el documento de usuario en Firestore
       const userDocRef = doc(firestore, 'users', user.uid);
-      const userData = {
+      await setDoc(userDocRef, {
         id: user.uid,
         name: data.name,
         email: data.email,
         role: data.role,
-      };
-      console.log('Attempting to create user document in Firestore with data:', userData);
-      await setDoc(userDocRef, userData);
-      console.log('Firestore document created successfully.');
+      });
 
-      // La redirección es manejada por el layout al detectar el cambio de estado de autenticación.
-      // No es necesario hacer nada más aquí.
-
+      // La redirección es manejada por el layout principal
     } catch (error: any) {
-      console.error('Firebase signup error:', error);
-      console.error('Error Code:', error.code);
-      console.error('Error Message:', error.message);
       let errorMessage = 'No se pudo crear la cuenta. Por favor, intenta de nuevo.';
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'Este correo electrónico ya está registrado.';
@@ -83,7 +70,6 @@ export default function SignupPage() {
         description: errorMessage,
       });
     } finally {
-        console.log('Finished signup attempt. Setting loading to false.');
         setIsLoading(false);
     }
   };

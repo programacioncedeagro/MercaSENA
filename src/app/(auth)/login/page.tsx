@@ -36,18 +36,12 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: LoginFormValues) => {
-    console.log('Login attempt with:', data);
     setIsLoading(true);
     try {
-      console.log('Attempting to sign in with Firebase...');
       await signInWithEmailAndPassword(auth, data.email, data.password);
-      console.log('Firebase sign in successful.');
-      // La redirección es manejada por el layout al detectar el cambio de estado de autenticación.
+      // La redirección ahora es manejada por el layout principal.
+      // No es necesario redirigir desde aquí.
     } catch (error: any) {
-      console.error('Firebase sign in error:', error);
-      console.error('Error Code:', error.code);
-      console.error('Error Message:', error.message);
-
       let errorMessage = 'No se pudo iniciar sesión. Por favor, intenta de nuevo.';
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
         errorMessage = 'El correo o la contraseña son incorrectos.';
@@ -59,7 +53,6 @@ export default function LoginPage() {
         description: errorMessage,
       });
     } finally {
-      console.log('Finished login attempt. Setting loading to false.');
       setIsLoading(false);
     }
   };
