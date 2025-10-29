@@ -84,9 +84,10 @@ export function WorkPlanDisplay({ workPlan, onSave, onDownload }: WorkPlanDispla
 
       {/* Tabs Principales */}
       <Tabs defaultValue="5m" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="5m">Metodología 5M</TabsTrigger>
           <TabsTrigger value="cronograma">Cronograma</TabsTrigger>
+          <TabsTrigger value="checklist">Lista Chequeo</TabsTrigger>
           <TabsTrigger value="mercado">Mercado</TabsTrigger>
           <TabsTrigger value="rentabilidad">Rentabilidad</TabsTrigger>
           <TabsTrigger value="agroindustria">Agroindustria</TabsTrigger>
@@ -279,68 +280,297 @@ export function WorkPlanDisplay({ workPlan, onSave, onDownload }: WorkPlanDispla
           </div>
         </TabsContent>
 
-        {/* Cronograma */}
+        {/* Cronograma Detallado */}
         <TabsContent value="cronograma" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                Cronograma de Actividades
-              </CardTitle>
-              <CardDescription>
-                Ruta crítica y timeline del proyecto
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
-                  <h4 className="font-semibold text-red-800 mb-2">Ruta Crítica:</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {workPlan.criticalPath.map((phase, idx) => (
-                      <Badge key={idx} variant="destructive">{phase}</Badge>
-                    ))}
-                  </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Resumen del Cronograma */}
+            <Card className="lg:col-span-1">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Resumen del Cronograma
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Duración Total:</span>
+                  <Badge variant="outline">{workPlan.cronograma.totalDays} días</Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Fases:</span>
+                  <Badge variant="outline">{workPlan.cronograma.phases.length} fases</Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Actividades:</span>
+                  <Badge variant="outline">
+                    {workPlan.cronograma.phases.reduce((total, phase) => total + phase.activities.length, 0)} actividades
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Hitos Clave:</span>
+                  <Badge variant="outline">{workPlan.cronograma.keyMilestones.length} hitos</Badge>
                 </div>
                 
-                <div className="space-y-3">
-                  {workPlan.phases.map((phase, idx) => (
-                    <div key={idx} className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-lg">{phase.name}</h4>
-                        <div className="flex items-center gap-4">
-                          {phase.criticalPath && (
-                            <Badge variant="destructive">Crítica</Badge>
-                          )}
-                          <span className="text-sm text-gray-600">{phase.duration} días</span>
-                          <span className="font-semibold text-green-600">
-                            {formatCurrency(phase.estimatedCost)}
-                          </span>
+                <Separator />
+                
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold">Hitos Importantes:</h4>
+                  {workPlan.cronograma.keyMilestones.map((milestone, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-sm">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span className="text-gray-600">Día {milestone.day}:</span>
+                      <span className="font-medium">{milestone.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Cronograma por Fases */}
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Cronograma Detallado por Fases</CardTitle>
+                <CardDescription>
+                  Actividades organizadas por categoría y tiempo
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {workPlan.cronograma.phases.map((phase, phaseIdx) => (
+                    <div key={phaseIdx} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-3 h-3 rounded-full ${
+                            phase.category === 'preparacion' ? 'bg-blue-500' :
+                            phase.category === 'siembra' ? 'bg-green-500' :
+                            phase.category === 'mantenimiento' ? 'bg-yellow-500' :
+                            phase.category === 'cosecha' ? 'bg-orange-500' :
+                            'bg-purple-500'
+                          }`} />
+                          <h4 className="font-semibold text-lg capitalize">{phase.name}</h4>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm text-gray-600">
+                            Días {phase.startDay} - {phase.startDay + phase.duration - 1}
+                          </div>
+                          <Badge variant="outline">{phase.duration} días</Badge>
                         </div>
                       </div>
-                      {phase.dependencies.length > 0 && (
-                        <div className="text-sm text-gray-600 mb-2">
-                          <strong>Depende de:</strong> {phase.dependencies.join(', ')}
-                        </div>
-                      )}
-                      <div className="space-y-2">
+                      
+                      <p className="text-sm text-gray-600 mb-4">{phase.description}</p>
+                      
+                      <div className="space-y-3">
                         {phase.activities.map((activity, actIdx) => (
-                          <div key={actIdx} className="bg-gray-50 p-3 rounded">
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium">{activity.name}</span>
-                              <div className="text-sm text-gray-600">
-                                {activity.duration} días - {formatCurrency(activity.cost)}
+                          <div key={actIdx} className={`border rounded p-3 ${
+                            activity.criticalActivity ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'
+                          }`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                {activity.isKeyMilestone && (
+                                  <Target className="w-4 h-4 text-orange-500" />
+                                )}
+                                {activity.criticalActivity && (
+                                  <AlertTriangle className="w-4 h-4 text-red-500" />
+                                )}
+                                <span className="font-medium">{activity.name}</span>
+                              </div>
+                              <div className="text-right text-sm">
+                                <div className="text-gray-600">Día {activity.day}</div>
+                                <div className="font-medium text-green-600">
+                                  {formatCurrency(activity.estimatedCost)}
+                                </div>
                               </div>
                             </div>
-                            <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
+                            
+                            <p className="text-sm text-gray-600 mb-2">{activity.description}</p>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                              {activity.materials.length > 0 && (
+                                <div>
+                                  <span className="font-medium text-blue-700">Materiales:</span>
+                                  <div className="text-gray-600">
+                                    {activity.materials.join(', ')}
+                                  </div>
+                                </div>
+                              )}
+                              {activity.equipment.length > 0 && (
+                                <div>
+                                  <span className="font-medium text-green-700">Equipos:</span>
+                                  <div className="text-gray-600">
+                                    {activity.equipment.join(', ')}
+                                  </div>
+                                </div>
+                              )}
+                              {activity.labor.length > 0 && (
+                                <div>
+                                  <span className="font-medium text-purple-700">Personal:</span>
+                                  <div className="text-gray-600">
+                                    {activity.labor.join(', ')}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {activity.weatherDependency && (
+                              <div className="mt-2 text-xs text-amber-600 flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3" />
+                                Dependiente del clima
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Lista de Chequeo */}
+        <TabsContent value="checklist" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Resumen de la Lista */}
+            <Card className="lg:col-span-1">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5" />
+                  Resumen Lista Chequeo
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-600">
+                    {workPlan.listaChequeo.totalItems}
+                  </div>
+                  <div className="text-sm text-gray-600">Items Totales</div>
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-3">
+                  {Object.entries(workPlan.listaChequeo.itemsPorCategoria).map(([categoria, count]) => (
+                    <div key={categoria} className="flex items-center justify-between">
+                      <span className="text-sm font-medium capitalize">
+                        {categoria.replace('_', ' ')}:
+                      </span>
+                      <Badge variant="outline">{count} items</Badge>
+                    </div>
+                  ))}
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold">Códigos de Prioridad:</h4>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-red-500 rounded-full" />
+                      <span>Alta prioridad</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-yellow-500 rounded-full" />
+                      <span>Media prioridad</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-green-500 rounded-full" />
+                      <span>Baja prioridad</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Lista de Chequeo por Categorías */}
+            <Card className="lg:col-span-3">
+              <CardHeader>
+                <CardTitle>Lista de Chequeo Detallada</CardTitle>
+                <CardDescription>
+                  Tareas organizadas por fase del proceso productivo
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="preparacion" className="w-full">
+                  <TabsList className="grid w-full grid-cols-5">
+                    <TabsTrigger value="preparacion">Preparación</TabsTrigger>
+                    <TabsTrigger value="siembra">Siembra</TabsTrigger>
+                    <TabsTrigger value="mantenimiento">Mantenimiento</TabsTrigger>
+                    <TabsTrigger value="cosecha">Cosecha</TabsTrigger>
+                    <TabsTrigger value="postcosecha">Postcosecha</TabsTrigger>
+                  </TabsList>
+                  
+                  {Object.entries(workPlan.listaChequeo.categorias).map(([categoria, datos]) => (
+                    <TabsContent key={categoria} value={categoria} className="space-y-4">
+                      <div className="mb-4">
+                        <h4 className="font-semibold text-lg">{datos.nombre}</h4>
+                        <p className="text-gray-600 text-sm">{datos.descripcion}</p>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        {datos.items.map((item, itemIdx) => (
+                          <div key={itemIdx} className="border rounded-lg p-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-start gap-3">
+                                <div className={`w-3 h-3 rounded-full mt-1 ${
+                                  item.prioridad === 'alta' ? 'bg-red-500' :
+                                  item.prioridad === 'media' ? 'bg-yellow-500' :
+                                  'bg-green-500'
+                                }`} />
+                                <div>
+                                  <h5 className="font-medium">{item.tarea}</h5>
+                                  <p className="text-sm text-gray-600 mt-1">{item.descripcion}</p>
+                                </div>
+                              </div>
+                              <div className="text-right text-sm">
+                                <div className="text-gray-600">Día {item.dia}</div>
+                                <Badge variant="outline" className="mt-1">
+                                  {item.tiempo_estimado}
+                                </Badge>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <span className="font-medium text-blue-700">Recursos Necesarios:</span>
+                                <ul className="text-gray-600 text-xs mt-1">
+                                  {item.recursos_necesarios.map((recurso, rIdx) => (
+                                    <li key={rIdx} className="flex items-center gap-1">
+                                      <span className="w-1 h-1 bg-gray-400 rounded-full" />
+                                      {recurso}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                              
+                              <div>
+                                <span className="font-medium text-green-700">Criterios de Calidad:</span>
+                                <ul className="text-gray-600 text-xs mt-1">
+                                  {item.criterios_calidad.map((criterio, cIdx) => (
+                                    <li key={cIdx} className="flex items-center gap-1">
+                                      <CheckCircle className="w-3 h-3 text-green-500" />
+                                      {criterio}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                            
+                            {item.observaciones && (
+                              <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm">
+                                <span className="font-medium text-yellow-800">Observaciones:</span>
+                                <span className="text-yellow-700 ml-2">{item.observaciones}</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Análisis de Mercado */}

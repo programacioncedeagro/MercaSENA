@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, Bot, Loader2, Wand2, CheckCircle, FileText, Sparkles, ListChecks } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { getHarvestEstimateAction, generateComprehensiveWorkPlanAction } from '@/app/actions';
@@ -22,7 +22,6 @@ import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { WorkPlanDisplay } from '@/components/work-plan-display';
-import { generateCropActivities, getCropDuration } from '@/lib/crop-activities';
 
 const productionSchema = z.object({
   name: z.string().min(1, 'El nombre del producto es requerido.'),
@@ -144,18 +143,39 @@ export default function NewProductionPage() {
         toast({ variant: 'destructive', title: 'Estimación requerida', description: 'Por favor, genera una estimación de cosecha con IA antes de registrar.'});
         return;
     }
+    if (!workPlan) {
+        toast({ variant: 'destructive', title: 'Plan de trabajo requerido', description: 'Por favor, genera un plan de trabajo integral con IA antes de registrar.'});
+        return;
+    }
 
     setIsSubmitting(true);
 
-    // Generar actividades automáticamente basadas en el tipo de cultivo
-    const cropActivities = generateCropActivities(data.name, data.plantingDate);
-    const estimatedDuration = getCropDuration(data.name);
+    // Extraer actividades del cronograma del plan de trabajo IA
+    const planActivities = workPlan.cronograma.phases.flatMap(phase => 
+      phase.activities.map(activity => ({
+        id: activity.id,
+        date: format(addDays(data.plantingDate, activity.day - 1), 'yyyy-MM-dd'),
+        description: activity.description,
+        metadata: {
+          name: activity.name,
+          isKeyMilestone: activity.isKeyMilestone,
+          category: activity.category,
+          daysFromStart: activity.day - 1,
+          materials: activity.materials,
+          equipment: activity.equipment,
+          labor: activity.labor,
+          estimatedCost: activity.estimatedCost,
+          weatherDependency: activity.weatherDependency,
+          criticalActivity: activity.criticalActivity
+        }
+      }))
+    );
 
     // Actividad inicial de registro
     const initialActivity = {
       id: 'initial',
       date: new Date().toISOString(),
-      description: `Registro inicial del cultivo de ${data.name}. Planificación iniciada.`,
+      description: `Registro inicial del cultivo de ${data.name}. Plan de trabajo integral generado con IA.`,
       metadata: {
         name: 'Registro inicial',
         isKeyMilestone: true,
@@ -172,10 +192,10 @@ export default function NewProductionPage() {
         status: 'Planeación',
         producerId: user.uid,
         createdAt: new Date().toISOString(),
-        // Incluir todas las actividades generadas automáticamente
-        activities: [initialActivity, ...cropActivities],
-        // Incluir el plan de trabajo si está disponible
-        workPlan: workPlan ? {
+        // Incluir todas las actividades del plan de trabajo IA
+        activities: [initialActivity, ...planActivities],
+        // Incluir el plan de trabajo completo
+        workPlan: {
           ...workPlan,
           // Remover las imágenes para no sobrecargar Firebase (se pueden guardar por separado)
           generatedImages: workPlan.generatedImages.map(img => ({
@@ -185,11 +205,11 @@ export default function NewProductionPage() {
             // Solo guardar un identificador o URL, no el base64 completo
             imageId: `${user.uid}_${Date.now()}_${img.phase}`
           }))
-        } : null,
-        // Información adicional del cronograma
-        estimatedDuration,
-        totalActivities: cropActivities.length + 1,
-        keyMilestones: cropActivities.filter(act => act.metadata?.isKeyMilestone).length + 1
+        },
+        // Información adicional del cronograma del plan IA
+        estimatedDuration: workPlan.cronograma.totalDays,
+        totalActivities: planActivities.length + 1,
+        keyMilestones: workPlan.cronograma.keyMilestones.length
     };
     
     const productionsRef = collection(firestore, 'users', user.uid, 'productions');
@@ -197,7 +217,7 @@ export default function NewProductionPage() {
 
     toast({
       title: '¡Producción Registrada!',
-      description: `Se ha registrado el cultivo de ${data.name} con ${cropActivities.length + 1} actividades programadas en el cronograma.`,
+      description: `Se ha registrado el cultivo de ${data.name} con plan de trabajo integral incluyendo cronograma y lista de chequeo generados con IA.`,
     });
     setIsSubmitting(false);
     router.push('/productor/produccion');
@@ -404,143 +424,113 @@ export default function NewProductionPage() {
           </CardContent>
         </Card>
 
-        {/* Nueva sección para mostrar el cronograma automático */}
+        {/* Preview del Plan de Trabajo Integral */}
         {watchedFields.name && (
-          <Card className="shadow-lg border-blue-200">
+          <Card className="shadow-lg border-green-200">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <ListChecks className="text-blue-600" />
-                Cronograma Automático de Actividades
+                <FileText className="text-green-600" />
+                Plan de Trabajo Integral con IA
               </CardTitle>
               <CardDescription>
-                Se generará automáticamente un cronograma completo con todas las actividades necesarias 
-                para el cultivo de {watchedFields.name}. Cada actividad tendrá lista de chequeo individual.
+                El Plan de Trabajo Integral incluye metodología 5M, cronograma detallado, lista de chequeo,
+                análisis de mercado y rentabilidad para {watchedFields.name}.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {(() => {
-                const duration = getCropDuration(watchedFields.name);
-                const sampleActivities = generateCropActivities(
-                  watchedFields.name, 
-                  watchedFields.plantingDate || new Date()
-                ).slice(0, 6); // Mostrar solo las primeras 6 como preview
-                
-                return (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50 rounded-lg">
-                      <div className="text-center">
-                        <div className="font-bold text-2xl text-blue-600">{duration}</div>
-                        <div className="text-sm text-blue-800">Días estimados</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-bold text-2xl text-blue-600">
-                          {generateCropActivities(watchedFields.name, new Date()).length}
-                        </div>
-                        <div className="text-sm text-blue-800">Actividades totales</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-bold text-2xl text-blue-600">
-                          {generateCropActivities(watchedFields.name, new Date()).filter(a => a.metadata?.isKeyMilestone).length}
-                        </div>
-                        <div className="text-sm text-blue-800">Hitos clave</div>
-                      </div>
+              {workPlan ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-green-50 rounded-lg">
+                    <div className="text-center">
+                      <div className="font-bold text-2xl text-green-600">{workPlan.cronograma.totalDays}</div>
+                      <div className="text-sm text-green-800">Días del cronograma</div>
                     </div>
-                    
-                    <div>
-                      <h4 className="font-semibold mb-3 text-blue-800">Vista previa de actividades principales:</h4>
-                      <div className="space-y-2">
-                        {sampleActivities.map((activity, index) => (
-                          <div key={index} className="flex items-center gap-3 p-2 bg-white border border-blue-200 rounded">
-                            <div className={`w-3 h-3 rounded-full ${activity.metadata?.isKeyMilestone ? 'bg-red-500' : 'bg-blue-400'}`}></div>
-                            <div className="flex-1">
-                              <div className="font-medium">{activity.metadata?.name}</div>
-                              <div className="text-sm text-gray-600">
-                                Día {activity.metadata?.daysFromStart} • {activity.metadata?.category} • {activity.metadata?.duration} días
-                              </div>
-                            </div>
-                            {activity.metadata?.isKeyMilestone && (
-                              <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Hito Clave</span>
-                            )}
-                          </div>
-                        ))}
-                        {generateCropActivities(watchedFields.name, new Date()).length > 6 && (
-                          <div className="text-center text-blue-600 text-sm">
-                            ... y {generateCropActivities(watchedFields.name, new Date()).length - 6} actividades más
-                          </div>
-                        )}
+                    <div className="text-center">
+                      <div className="font-bold text-2xl text-green-600">
+                        {workPlan.cronograma.phases.reduce((total, phase) => total + phase.activities.length, 0)}
                       </div>
+                      <div className="text-sm text-green-800">Actividades</div>
                     </div>
-                    
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="text-sm text-green-800">
-                        <strong>💡 Ventajas del cronograma automático:</strong>
-                        <ul className="mt-2 space-y-1 text-xs">
-                          <li>• Actividades específicas para {watchedFields.name}</li>
-                          <li>• Lista de chequeo individual para cada tarea</li>
-                          <li>• Seguimiento de progreso en tiempo real</li>
-                          <li>• Identificación de hitos clave del cultivo</li>
-                          <li>• Recomendaciones de materiales y equipos</li>
-                        </ul>
-                      </div>
+                    <div className="text-center">
+                      <div className="font-bold text-2xl text-green-600">{workPlan.listaChequeo.totalItems}</div>
+                      <div className="text-sm text-green-800">Items de chequeo</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-bold text-2xl text-green-600">{workPlan.cronograma.keyMilestones.length}</div>
+                      <div className="text-sm text-green-800">Hitos clave</div>
                     </div>
                   </div>
-                );
-              })()}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Nueva sección para generar plan de trabajo completo */}
-        <Card className="shadow-lg border-green-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="text-green-600" />
-              Plan de Trabajo Integral con IA
-            </CardTitle>
-            <CardDescription>
-              Genera un plan completo basado en metodología 5M con cronograma, análisis de mercado, 
-              rentabilidad y agroindustrialización. Incluye imágenes ilustrativas generadas por IA.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <Button
-              onClick={handleGenerateWorkPlan}
-              disabled={isGeneratingPlan || !watchedFields.name || !watchedFields.plantingDate || !watchedFields.location || !watchedFields.area}
-              className="w-full h-14 text-lg bg-green-600 hover:bg-green-700"
-            >
-              {isGeneratingPlan ? (
-                <><Loader2 className="mr-2 h-6 w-6 animate-spin" /> Generando Plan Completo...</>
+                  
+                  <div>
+                    <h4 className="font-semibold mb-3 text-green-800">Fases del cronograma incluidas:</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {workPlan.cronograma.phases.map((phase, index) => (
+                        <div key={index} className="p-3 bg-white border border-green-200 rounded">
+                          <div className="font-medium capitalize">{phase.name}</div>
+                          <div className="text-sm text-gray-600">
+                            {phase.activities.length} actividades • {phase.duration} días
+                          </div>
+                          <div className="text-xs text-green-600 mt-1 capitalize">
+                            Categoría: {phase.category}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="font-semibold text-blue-800 mb-2">Incluye también:</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-blue-700">
+                      <div>• Metodología 5M completa</div>
+                      <div>• Análisis de mercado y precios</div>
+                      <div>• Análisis de rentabilidad detallado</div>
+                      <div>• Recomendaciones agroindustriales</div>
+                      <div>• Lista de chequeo por categorías</div>
+                      <div>• Cronograma con fechas específicas</div>
+                    </div>
+                  </div>
+                </div>
               ) : (
-                <><Sparkles className="mr-2 h-6 w-6" /> Generar Plan de Trabajo Integral con IA</>
-              )}
-            </Button>
-            
-            {workPlan && (
-              <div className="space-y-4">
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <h3 className="font-bold text-lg flex items-center gap-2 text-green-800">
-                    <CheckCircle className="text-green-600" />
-                    ¡Plan de Trabajo Generado!
-                  </h3>
-                  <p className="text-green-700 mt-2">
-                    Se ha creado un plan completo con metodología 5M, análisis de rentabilidad, 
-                    cronograma detallado y recomendaciones de agroindustrialización.
-                  </p>
-                  <div className="mt-3 flex gap-2">
-                    <Button 
-                      onClick={() => setShowPlan(!showPlan)}
-                      variant="outline"
-                      size="sm"
-                      className="border-green-300 text-green-700 hover:bg-green-100"
+                <div className="space-y-4">
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="text-sm text-yellow-800">
+                      <strong>� El Plan de Trabajo Integral incluirá:</strong>
+                      <ul className="mt-2 space-y-1 text-xs">
+                        <li>• <strong>Metodología 5M:</strong> Mano de obra, Maquinaria, Materiales, Métodos, Medio ambiente</li>
+                        <li>• <strong>Cronograma detallado:</strong> Actividades específicas por días con recursos necesarios</li>
+                        <li>• <strong>Lista de chequeo:</strong> Items categorizados por fase productiva</li>
+                        <li>• <strong>Análisis de mercado:</strong> Precios, demanda y estrategias de comercialización</li>
+                        <li>• <strong>Análisis de rentabilidad:</strong> Costos, ingresos, ROI y punto de equilibrio</li>
+                        <li>• <strong>Recomendaciones agroindustriales:</strong> Valor agregado y nuevos mercados</li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center">
+                    <Button
+                      type="button"
+                      onClick={handleGenerateWorkPlan}
+                      disabled={isGeneratingPlan || !watchedFields.name || !watchedFields.plantingDate || !watchedFields.location || !watchedFields.area}
+                      className="bg-green-600 hover:bg-green-700"
                     >
-                      {showPlan ? 'Ocultar Plan' : 'Ver Plan Detallado'}
+                      {isGeneratingPlan ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generando Plan Integral...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="mr-2 h-4 w-4" />
+                          Generar Plan de Trabajo Integral con IA
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Mostrar el plan de trabajo si está disponible */}
         {showPlan && workPlan && (
