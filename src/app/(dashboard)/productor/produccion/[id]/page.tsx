@@ -327,105 +327,151 @@ export default function ProducerProductDetailPage() {
 
         {/* Tab Cronograma */}
         <TabsContent value="cronograma" className="space-y-6">
-          {production.workPlan?.phases ? (
+          {production.activities && production.activities.length > 1 ? (
             <div className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-2xl flex items-center gap-3">
                     <Calendar className="h-6 w-6" />
-                    Cronograma de Fases
+                    Cronograma del Cultivo de {production.name}
                   </CardTitle>
                   <CardDescription>
-                    Timeline detallado de todas las fases del proyecto
+                    Timeline detallado de todas las actividades específicas para este cultivo
                   </CardDescription>
+                  {production.totalActivities && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg">
+                      <div className="text-center">
+                        <div className="font-bold text-2xl text-blue-600">{production.totalActivities}</div>
+                        <div className="text-sm text-blue-800">Actividades</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-2xl text-green-600">{production.keyMilestones || 0}</div>
+                        <div className="text-sm text-green-800">Hitos clave</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-2xl text-orange-600">{production.estimatedDuration || 0}</div>
+                        <div className="text-sm text-orange-800">Días totales</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-2xl text-purple-600">{production.progress}%</div>
+                        <div className="text-sm text-purple-800">Progreso</div>
+                      </div>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="relative">
-                    {production.workPlan.phases.map((phase, index) => {
-                      const isCurrentPhase = currentPhase?.name === phase.name;
+                    {production.activities.map((activity, index) => {
+                      if (index === 0) return null; // Skip initial activity
+                      
+                      const isKeyMilestone = activity.metadata?.isKeyMilestone;
+                      const category = activity.metadata?.category;
+                      const dayFromStart = activity.metadata?.daysFromStart;
                       const plantingDate = new Date(production.plantingDate);
-                      let phaseStartDate = new Date(plantingDate);
+                      const activityDate = activity.metadata?.daysFromStart ? 
+                        new Date(plantingDate.getTime() + (activity.metadata.daysFromStart * 24 * 60 * 60 * 1000)) :
+                        new Date(activity.date);
                       
-                      // Calcular fecha de inicio basada en fases anteriores
-                      for (let i = 0; i < index; i++) {
-                        phaseStartDate.setDate(phaseStartDate.getDate() + production.workPlan!.phases[i].duration);
-                      }
+                      const categoryColors = {
+                        preparacion: 'border-blue-500 bg-blue-50',
+                        siembra: 'border-green-500 bg-green-50',
+                        cuidado: 'border-yellow-500 bg-yellow-50',
+                        cosecha: 'border-orange-500 bg-orange-50',
+                        postcosecha: 'border-purple-500 bg-purple-50'
+                      };
                       
-                      const phaseEndDate = new Date(phaseStartDate);
-                      phaseEndDate.setDate(phaseEndDate.getDate() + phase.duration);
+                      const categoryIcons = {
+                        preparacion: '🔧',
+                        siembra: '🌱',
+                        cuidado: '🌿',
+                        cosecha: '🌾',
+                        postcosecha: '📦'
+                      };
 
                       return (
                         <div 
                           key={index} 
                           className={cn(
                             "relative border-l-4 ml-4 pl-8 pb-8",
-                            isCurrentPhase ? "border-green-500" : "border-gray-200"
+                            isKeyMilestone ? "border-red-500" : "border-gray-300"
                           )}
                         >
                           <div className={cn(
-                            "absolute -left-3 top-0 h-6 w-6 rounded-full flex items-center justify-center",
-                            isCurrentPhase ? "bg-green-500 text-white" : "bg-gray-200 text-gray-600"
+                            "absolute -left-3 top-0 h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold",
+                            isKeyMilestone ? "bg-red-500 text-white" : "bg-gray-300 text-gray-700"
                           )}>
-                            {index + 1}
+                            {dayFromStart !== undefined ? dayFromStart : index}
                           </div>
                           
                           <Card className={cn(
                             "transition-all duration-200",
-                            isCurrentPhase ? "ring-2 ring-green-500 shadow-lg" : ""
+                            category ? categoryColors[category as keyof typeof categoryColors] : '',
+                            isKeyMilestone ? "ring-2 ring-red-300 shadow-lg" : "shadow-sm"
                           )}>
-                            <CardHeader>
+                            <CardHeader className="pb-3">
                               <div className="flex justify-between items-start">
-                                <div>
+                                <div className="flex-1">
                                   <CardTitle className={cn(
-                                    "text-lg",
-                                    isCurrentPhase ? "text-green-700" : ""
+                                    "text-lg flex items-center gap-2",
+                                    isKeyMilestone ? "text-red-700" : ""
                                   )}>
-                                    {phase.name}
+                                    {category && categoryIcons[category as keyof typeof categoryIcons]} 
+                                    {activity.metadata?.name || activity.description}
+                                    {isKeyMilestone && (
+                                      <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded ml-2">Hito Clave</span>
+                                    )}
                                   </CardTitle>
-                                  <CardDescription>
-                                    {format(phaseStartDate, "dd MMM yyyy", { locale: es })} - {format(phaseEndDate, "dd MMM yyyy", { locale: es })}
+                                  <CardDescription className="mt-1">
+                                    {format(activityDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: es })}
                                   </CardDescription>
                                 </div>
                                 <div className="text-right">
-                                  <div className="text-sm text-muted-foreground">Duración</div>
-                                  <div className="font-bold">{phase.duration} días</div>
-                                  <div className="text-sm text-muted-foreground mt-1">Costo</div>
-                                  <div className="font-bold text-green-600">{formatCurrency(phase.estimatedCost)}</div>
+                                  <div className="text-sm text-muted-foreground">Día</div>
+                                  <div className="font-bold text-lg">{dayFromStart || 0}</div>
+                                  {activity.metadata?.duration && (
+                                    <>
+                                      <div className="text-sm text-muted-foreground mt-1">Duración</div>
+                                      <div className="font-bold">{activity.metadata.duration} días</div>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                             </CardHeader>
-                            <CardContent>
-                              <div className="space-y-4">
-                                <div>
-                                  <h4 className="font-medium mb-2">Actividades principales:</h4>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                    {phase.activities?.map((activity, actIndex) => (
-                                      <div key={actIndex} className="text-sm p-2 bg-gray-50 rounded">
-                                        <div className="font-medium">{activity.name}</div>
-                                        <div className="text-muted-foreground text-xs">
-                                          {activity.duration} días • {formatCurrency(activity.cost)}
-                                        </div>
+                            <CardContent className="pt-0">
+                              <p className="text-sm mb-3">
+                                {activity.description.replace(`${activity.metadata?.name}: `, '')}
+                              </p>
+                              
+                              {(activity.metadata?.materials?.length || activity.metadata?.equipment?.length || activity.metadata?.laborRequired?.length) && (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                  {activity.metadata?.materials && activity.metadata.materials.length > 0 && (
+                                    <div className="p-2 bg-white bg-opacity-50 rounded">
+                                      <div className="font-medium text-xs text-gray-600 mb-1">📦 Materiales</div>
+                                      <div className="text-sm">
+                                        {activity.metadata.materials.join(', ')}
                                       </div>
-                                    ))}
-                                  </div>
-                                </div>
-                                
-                                {phase.resources && phase.resources.length > 0 && (
-                                  <div>
-                                    <h4 className="font-medium mb-2">Recursos necesarios:</h4>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                                      {phase.resources.slice(0, 4).map((resource, resIndex) => (
-                                        <div key={resIndex} className="p-2 border rounded">
-                                          <div className="font-medium truncate">{resource.name}</div>
-                                          <div className="text-muted-foreground">
-                                            {resource.quantity} {resource.unit}
-                                          </div>
-                                        </div>
-                                      ))}
                                     </div>
-                                  </div>
-                                )}
-                              </div>
+                                  )}
+                                  
+                                  {activity.metadata?.equipment && activity.metadata.equipment.length > 0 && (
+                                    <div className="p-2 bg-white bg-opacity-50 rounded">
+                                      <div className="font-medium text-xs text-gray-600 mb-1">🔧 Equipos</div>
+                                      <div className="text-sm">
+                                        {activity.metadata.equipment.join(', ')}
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {activity.metadata?.laborRequired && activity.metadata.laborRequired.length > 0 && (
+                                    <div className="p-2 bg-white bg-opacity-50 rounded">
+                                      <div className="font-medium text-xs text-gray-600 mb-1">👥 Mano de obra</div>
+                                      <div className="text-sm">
+                                        {activity.metadata.laborRequired.join(', ')}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </CardContent>
                           </Card>
                         </div>
@@ -441,7 +487,8 @@ export default function ProducerProductDetailPage() {
                 <Calendar className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-xl font-semibold mb-2">No hay cronograma disponible</h3>
                 <p className="text-muted-foreground">
-                  Genere un plan de trabajo comprehensive para ver el cronograma detallado.
+                  Este producto fue creado antes del sistema de cronograma automático. 
+                  Las nuevas producciones incluyen cronogramas completos con actividades específicas del cultivo.
                 </p>
               </CardContent>
             </Card>
@@ -450,68 +497,118 @@ export default function ProducerProductDetailPage() {
 
         {/* Tab Lista de Chequeo */}
         <TabsContent value="chequeo" className="space-y-6">
-          {production.workPlan?.phases ? (
+          {production.activities && production.activities.length > 1 ? (
             <div className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-2xl flex items-center gap-3">
                     <ClipboardList className="h-6 w-6" />
-                    Lista de Chequeo por Fases
+                    Lista de Chequeo del Cronograma
                   </CardTitle>
                   <CardDescription>
-                    Marque las tareas completadas para realizar seguimiento del progreso
+                    Actividades específicas para el cultivo de {production.name}. Marque las tareas completadas para realizar seguimiento del progreso.
                   </CardDescription>
+                  {production.totalActivities && (
+                    <div className="grid grid-cols-3 gap-4 mt-4 p-4 bg-blue-50 rounded-lg">
+                      <div className="text-center">
+                        <div className="font-bold text-2xl text-blue-600">{production.totalActivities}</div>
+                        <div className="text-sm text-blue-800">Actividades totales</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-2xl text-green-600">{production.keyMilestones || 0}</div>
+                        <div className="text-sm text-green-800">Hitos clave</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-2xl text-orange-600">{production.estimatedDuration || 0}</div>
+                        <div className="text-sm text-orange-800">Días estimados</div>
+                      </div>
+                    </div>
+                  )}
                 </CardHeader>
               </Card>
 
-              {production.workPlan.phases.map((phase, phaseIndex) => {
-                const totalTasks = phase.activities?.length || 0;
-                const completedTasksCount = phase.activities?.filter((_, taskIndex) => 
-                  completedTasks[`${phaseIndex}-${taskIndex}`]
-                ).length || 0;
-                const phaseProgress = totalTasks > 0 ? (completedTasksCount / totalTasks) * 100 : 0;
+              {/* Agrupar actividades por categoría */}
+              {['preparacion', 'siembra', 'cuidado', 'cosecha', 'postcosecha'].map(category => {
+                const categoryActivities = production.activities?.filter(activity => 
+                  activity.metadata?.category === category
+                ) || [];
+                
+                if (categoryActivities.length === 0) return null;
+                
+                const completedInCategory = categoryActivities.filter((_, index) => 
+                  completedTasks[`${category}-${index}`]
+                ).length;
+                const categoryProgress = categoryActivities.length > 0 ? (completedInCategory / categoryActivities.length) * 100 : 0;
+                
+                const categoryLabels = {
+                  preparacion: { name: 'Preparación', color: 'text-blue-700 bg-blue-50 border-blue-200' },
+                  siembra: { name: 'Siembra', color: 'text-green-700 bg-green-50 border-green-200' },
+                  cuidado: { name: 'Cuidado y Manejo', color: 'text-yellow-700 bg-yellow-50 border-yellow-200' },
+                  cosecha: { name: 'Cosecha', color: 'text-orange-700 bg-orange-50 border-orange-200' },
+                  postcosecha: { name: 'Postcosecha', color: 'text-purple-700 bg-purple-50 border-purple-200' }
+                };
                 
                 return (
-                  <Card key={phaseIndex}>
+                  <Card key={category} className={`border-2 ${categoryLabels[category as keyof typeof categoryLabels].color}`}>
                     <CardHeader>
                       <div className="flex justify-between items-center">
-                        <CardTitle className="text-lg">{phase.name}</CardTitle>
-                        <Badge variant={phaseProgress === 100 ? "default" : "secondary"}>
-                          {completedTasksCount}/{totalTasks} completadas
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded-full ${category === 'preparacion' ? 'bg-blue-500' : 
+                                                                    category === 'siembra' ? 'bg-green-500' :
+                                                                    category === 'cuidado' ? 'bg-yellow-500' :
+                                                                    category === 'cosecha' ? 'bg-orange-500' : 'bg-purple-500'}`}></div>
+                          {categoryLabels[category as keyof typeof categoryLabels].name}
+                        </CardTitle>
+                        <Badge variant={categoryProgress === 100 ? "default" : "secondary"}>
+                          {completedInCategory}/{categoryActivities.length} completadas
                         </Badge>
                       </div>
-                      <Progress value={phaseProgress} className="mt-2" />
+                      <Progress value={categoryProgress} className="mt-2" />
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {phase.activities?.map((activity, taskIndex) => {
-                          const taskKey = `${phaseIndex}-${taskIndex}`;
+                        {categoryActivities.map((activity, activityIndex) => {
+                          const taskKey = `${category}-${activityIndex}`;
                           const isCompleted = completedTasks[taskKey] || false;
+                          const isKeyMilestone = activity.metadata?.isKeyMilestone;
                           
                           return (
-                            <div key={taskIndex} className="flex items-start space-x-3 p-3 border rounded-lg">
+                            <div key={activityIndex} className={`flex items-start space-x-3 p-3 border rounded-lg ${
+                              isKeyMilestone ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                            }`}>
                               <Checkbox
                                 id={taskKey}
                                 checked={isCompleted}
-                                onCheckedChange={(checked) => handleTaskToggle(phaseIndex.toString(), taskIndex.toString(), checked as boolean)}
+                                onCheckedChange={(checked) => handleTaskToggle(category, activityIndex.toString(), checked as boolean)}
                                 className="mt-1"
                               />
                               <div className="flex-1">
                                 <label 
                                   htmlFor={taskKey} 
                                   className={cn(
-                                    "font-medium cursor-pointer",
+                                    "font-medium cursor-pointer flex items-center gap-2",
                                     isCompleted ? "line-through text-muted-foreground" : ""
                                   )}
                                 >
-                                  {activity.name}
+                                  {activity.metadata?.name || activity.description}
+                                  {isKeyMilestone && (
+                                    <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Hito Clave</span>
+                                  )}
                                 </label>
-                                <p className="text-sm text-muted-foreground mt-1">{activity.description}</p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {activity.description.replace(`${activity.metadata?.name}: `, '')}
+                                </p>
                                 <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-                                  <span>⏱️ {activity.duration} días</span>
-                                  <span>💰 {formatCurrency(activity.cost)}</span>
-                                  {activity.materials?.length > 0 && (
-                                    <span>📦 {activity.materials.length} materiales</span>
+                                  <span>📅 Día {activity.metadata?.daysFromStart}</span>
+                                  <span>⏱️ {activity.metadata?.duration} días</span>
+                                  {activity.metadata?.materials && activity.metadata.materials.length > 0 && (
+                                    <span>📦 {activity.metadata.materials.join(', ')}</span>
+                                  )}
+                                  {activity.metadata?.equipment && activity.metadata.equipment.length > 0 && (
+                                    <span>🔧 {activity.metadata.equipment.join(', ')}</span>
+                                  )}
+                                  {activity.metadata?.laborRequired && activity.metadata.laborRequired.length > 0 && (
+                                    <span>👥 {activity.metadata.laborRequired.join(', ')}</span>
                                   )}
                                 </div>
                               </div>
@@ -531,9 +628,10 @@ export default function ProducerProductDetailPage() {
             <Card>
               <CardContent className="text-center py-12">
                 <ClipboardList className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-xl font-semibold mb-2">No hay lista de chequeo disponible</h3>
+                <h3 className="text-xl font-semibold mb-2">No hay cronograma disponible</h3>
                 <p className="text-muted-foreground">
-                  Genere un plan de trabajo comprehensive para acceder a la lista de chequeo detallada.
+                  Este producto fue creado antes del sistema de cronograma automático. 
+                  Las nuevas producciones incluyen un cronograma completo con actividades específicas del cultivo.
                 </p>
               </CardContent>
             </Card>

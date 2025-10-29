@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Bot, Loader2, Wand2, CheckCircle, FileText, Sparkles } from 'lucide-react';
+import { CalendarIcon, Bot, Loader2, Wand2, CheckCircle, FileText, Sparkles, ListChecks } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +22,7 @@ import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { WorkPlanDisplay } from '@/components/work-plan-display';
+import { generateCropActivities, getCropDuration } from '@/lib/crop-activities';
 
 const productionSchema = z.object({
   name: z.string().min(1, 'El nombre del producto es requerido.'),
@@ -146,6 +147,23 @@ export default function NewProductionPage() {
 
     setIsSubmitting(true);
 
+    // Generar actividades automáticamente basadas en el tipo de cultivo
+    const cropActivities = generateCropActivities(data.name, data.plantingDate);
+    const estimatedDuration = getCropDuration(data.name);
+
+    // Actividad inicial de registro
+    const initialActivity = {
+      id: 'initial',
+      date: new Date().toISOString(),
+      description: `Registro inicial del cultivo de ${data.name}. Planificación iniciada.`,
+      metadata: {
+        name: 'Registro inicial',
+        isKeyMilestone: true,
+        category: 'preparacion' as const,
+        daysFromStart: 0
+      }
+    };
+
     const productionData = {
         ...data,
         plantingDate: format(data.plantingDate, 'yyyy-MM-dd'),
@@ -154,6 +172,8 @@ export default function NewProductionPage() {
         status: 'Planeación',
         producerId: user.uid,
         createdAt: new Date().toISOString(),
+        // Incluir todas las actividades generadas automáticamente
+        activities: [initialActivity, ...cropActivities],
         // Incluir el plan de trabajo si está disponible
         workPlan: workPlan ? {
           ...workPlan,
@@ -166,6 +186,10 @@ export default function NewProductionPage() {
             imageId: `${user.uid}_${Date.now()}_${img.phase}`
           }))
         } : null,
+        // Información adicional del cronograma
+        estimatedDuration,
+        totalActivities: cropActivities.length + 1,
+        keyMilestones: cropActivities.filter(act => act.metadata?.isKeyMilestone).length + 1
     };
     
     const productionsRef = collection(firestore, 'users', user.uid, 'productions');
@@ -173,7 +197,7 @@ export default function NewProductionPage() {
 
     toast({
       title: '¡Producción Registrada!',
-      description: `Se ha registrado el cultivo de ${data.name}.`,
+      description: `Se ha registrado el cultivo de ${data.name} con ${cropActivities.length + 1} actividades programadas en el cronograma.`,
     });
     setIsSubmitting(false);
     router.push('/productor/produccion');
@@ -380,6 +404,92 @@ export default function NewProductionPage() {
           </CardContent>
         </Card>
 
+        {/* Nueva sección para mostrar el cronograma automático */}
+        {watchedFields.name && (
+          <Card className="shadow-lg border-blue-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ListChecks className="text-blue-600" />
+                Cronograma Automático de Actividades
+              </CardTitle>
+              <CardDescription>
+                Se generará automáticamente un cronograma completo con todas las actividades necesarias 
+                para el cultivo de {watchedFields.name}. Cada actividad tendrá lista de chequeo individual.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(() => {
+                const duration = getCropDuration(watchedFields.name);
+                const sampleActivities = generateCropActivities(
+                  watchedFields.name, 
+                  watchedFields.plantingDate || new Date()
+                ).slice(0, 6); // Mostrar solo las primeras 6 como preview
+                
+                return (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50 rounded-lg">
+                      <div className="text-center">
+                        <div className="font-bold text-2xl text-blue-600">{duration}</div>
+                        <div className="text-sm text-blue-800">Días estimados</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-2xl text-blue-600">
+                          {generateCropActivities(watchedFields.name, new Date()).length}
+                        </div>
+                        <div className="text-sm text-blue-800">Actividades totales</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-2xl text-blue-600">
+                          {generateCropActivities(watchedFields.name, new Date()).filter(a => a.metadata?.isKeyMilestone).length}
+                        </div>
+                        <div className="text-sm text-blue-800">Hitos clave</div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-semibold mb-3 text-blue-800">Vista previa de actividades principales:</h4>
+                      <div className="space-y-2">
+                        {sampleActivities.map((activity, index) => (
+                          <div key={index} className="flex items-center gap-3 p-2 bg-white border border-blue-200 rounded">
+                            <div className={`w-3 h-3 rounded-full ${activity.metadata?.isKeyMilestone ? 'bg-red-500' : 'bg-blue-400'}`}></div>
+                            <div className="flex-1">
+                              <div className="font-medium">{activity.metadata?.name}</div>
+                              <div className="text-sm text-gray-600">
+                                Día {activity.metadata?.daysFromStart} • {activity.metadata?.category} • {activity.metadata?.duration} días
+                              </div>
+                            </div>
+                            {activity.metadata?.isKeyMilestone && (
+                              <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Hito Clave</span>
+                            )}
+                          </div>
+                        ))}
+                        {generateCropActivities(watchedFields.name, new Date()).length > 6 && (
+                          <div className="text-center text-blue-600 text-sm">
+                            ... y {generateCropActivities(watchedFields.name, new Date()).length - 6} actividades más
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="text-sm text-green-800">
+                        <strong>💡 Ventajas del cronograma automático:</strong>
+                        <ul className="mt-2 space-y-1 text-xs">
+                          <li>• Actividades específicas para {watchedFields.name}</li>
+                          <li>• Lista de chequeo individual para cada tarea</li>
+                          <li>• Seguimiento de progreso en tiempo real</li>
+                          <li>• Identificación de hitos clave del cultivo</li>
+                          <li>• Recomendaciones de materiales y equipos</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Nueva sección para generar plan de trabajo completo */}
         <Card className="shadow-lg border-green-200">
           <CardHeader>
@@ -449,7 +559,14 @@ export default function NewProductionPage() {
 
         <div className="flex justify-end">
           <Button type="submit" size="lg" className="h-16 text-xl min-w-[200px]" disabled={isSubmitting || !estimationResult}>
-            {isSubmitting ? <Loader2 className="animate-spin" /> : "Registrar Producción"}
+            {isSubmitting ? (
+              <><Loader2 className="animate-spin mr-2" /> Creando...</>
+            ) : (
+              <>
+                <ListChecks className="mr-2 h-6 w-6" />
+                Crear Producción con Cronograma
+              </>
+            )}
           </Button>
         </div>
       </form>

@@ -37,6 +37,17 @@ export type Activity = {
   date: string;
   description: string;
   imageUrl?: string;
+  metadata?: {
+    name?: string;
+    duration?: number;
+    isKeyMilestone?: boolean;
+    category?: 'preparacion' | 'siembra' | 'cuidado' | 'cosecha' | 'postcosecha';
+    equipment?: string[];
+    materials?: string[];
+    laborRequired?: string[];
+    daysFromStart?: number;
+    endDate?: string;
+  };
 };
 
 export type OfferStatus = 'pendiente' | 'aceptada' | 'rechazada' | 'negociación';
@@ -80,6 +91,10 @@ export type Production = {
   qualityStandards?: string[];
   currentPrice?: number;
   totalQuantityAvailable?: number;
+  // Nuevos campos para cronograma automático
+  estimatedDuration?: number; // Duración estimada en días
+  totalActivities?: number; // Número total de actividades
+  keyMilestones?: number; // Número de hitos clave
 };
 
 // Nuevos tipos para gestión de compras y stock
