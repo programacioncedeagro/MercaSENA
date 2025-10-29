@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   /* config options here */
   pageExtensions: ['tsx', 'ts'],
   experimental: {
-    appDir: true,
+    // appDir is now default in Next.js 15, no longer needed
   },
   typescript: {
     ignoreBuildErrors: true,
@@ -32,11 +32,6 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
-    ],
-  },
-  devIndicators: {
-    allowedDevOrigins: [
-      '*.cloudworkstations.dev',
     ],
   },
 };

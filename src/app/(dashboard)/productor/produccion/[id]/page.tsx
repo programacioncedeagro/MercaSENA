@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, MapPin, Tractor, Sprout, CheckCircle, PlusCircle, Check, X, MessageCircle, Loader2, Eye, ListOrdered, Inbox } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
+import { Calendar, MapPin, Tractor, Sprout, CheckCircle, PlusCircle, Check, X, MessageCircle, Loader2, Eye, ListOrdered, Inbox, BookOpen, Users, Wrench, Package, Leaf, BarChart3, Target, ClipboardList } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query, where, arrayUnion } from 'firebase/firestore';
@@ -19,6 +21,8 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
+import { WorkPlanDisplay } from '@/components/work-plan-display';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const statusStyles = {
     pendiente: 'bg-yellow-100 text-yellow-800 border-yellow-300',
@@ -35,6 +39,7 @@ export default function ProducerProductDetailPage() {
 
   const [newActivityDescription, setNewActivityDescription] = useState('');
   const [isAddingActivity, setIsAddingActivity] = useState(false);
+  const [completedTasks, setCompletedTasks] = useState<Record<string, boolean>>({});
 
   const firestore = useFirestore();
   const { user } = useUser();
@@ -51,13 +56,10 @@ export default function ProducerProductDetailPage() {
     return query(collection(firestore, 'offers'), where('productId', '==', productionId));
   }, [firestore, productionId]);
 
-  const { data: offers, isLoading: areOffersLoading } = useCollection<Offer & { buyerName: string }>(offersQuery, {
-      fetchBuyerNames: true, // Custom flag to trigger buyer name fetching
-      firestore,
-  });
+  const { data: offers, isLoading: areOffersLoading } = useCollection<Offer & { buyerName: string }>(offersQuery);
   
-    const findImage = (url: string | undefined) => PlaceHolderImages.find(img => img.imageUrl === url);
-    const productImage = findImage(production?.productImage);
+  const findImage = (url: string | undefined) => PlaceHolderImages.find(img => img.imageUrl === url);
+  const productImage = findImage(production?.productImage);
 
   if (isProductionLoading) {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /></div>;
@@ -100,8 +102,49 @@ export default function ProducerProductDetailPage() {
     setIsAddingActivity(false);
   }
 
+  const handleTaskToggle = (phaseId: string, taskId: string, completed: boolean) => {
+    const key = `${phaseId}-${taskId}`;
+    setCompletedTasks(prev => ({
+      ...prev,
+      [key]: completed
+    }));
+    
+    toast({
+      title: completed ? "Tarea completada" : "Tarea pendiente",
+      description: completed ? "La tarea ha sido marcada como completada." : "La tarea ha sido marcada como pendiente.",
+    });
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const getCurrentPhase = () => {
+    if (!production.workPlan?.phases) return null;
+    
+    const now = new Date();
+    const plantingDate = new Date(production.plantingDate);
+    const daysSinceStart = Math.floor((now.getTime() - plantingDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    let cumulativeDays = 0;
+    for (const phase of production.workPlan.phases) {
+      if (daysSinceStart <= cumulativeDays + phase.duration) {
+        return phase;
+      }
+      cumulativeDays += phase.duration;
+    }
+    return production.workPlan.phases[production.workPlan.phases.length - 1];
+  };
+
+  const currentPhase = getCurrentPhase();
+
   return (
     <div className="max-w-7xl mx-auto flex flex-col gap-8">
+      {/* Header del Producto */}
       <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden shadow-2xl">
         {productImage && (
           <Image
@@ -116,118 +159,485 @@ export default function ProducerProductDetailPage() {
         <div className="absolute bottom-0 left-0 p-8">
           <h1 className="text-5xl font-bold text-white">{production.name}</h1>
           <p className="text-xl text-white/90 mt-2">{production.type}</p>
+          {currentPhase && (
+            <Badge className="mt-4 bg-green-600 text-white">
+              <Sprout className="w-4 h-4 mr-2" />
+              Fase actual: {currentPhase.name}
+            </Badge>
+          )}
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-            <Card className="shadow-lg">
-                <CardHeader>
-                    <CardTitle className="text-3xl">Detalles de la Producción</CardTitle>
-                </CardHeader>
-                <CardContent className="grid sm:grid-cols-2 gap-6 text-lg">
-                    <div className="flex items-center gap-3">
-                        <MapPin className="h-8 w-8 text-primary"/>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Origen</p>
-                            <p className="font-bold">{production.location}</p>
-                        </div>
+      {/* Tabs principales */}
+      <Tabs defaultValue="resumen" className="w-full">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="resumen">Resumen</TabsTrigger>
+          <TabsTrigger value="planificacion">Planificación</TabsTrigger>
+          <TabsTrigger value="cronograma">Cronograma</TabsTrigger>
+          <TabsTrigger value="chequeo">Lista Chequeo</TabsTrigger>
+          <TabsTrigger value="ofertas">Ofertas</TabsTrigger>
+          <TabsTrigger value="trazabilidad">Trazabilidad</TabsTrigger>
+        </TabsList>
+
+        {/* Tab Resumen */}
+        <TabsContent value="resumen" className="space-y-6">
+          <div className="grid lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-2xl flex items-center gap-3">
+                  <Target className="h-6 w-6" />
+                  Información General
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid sm:grid-cols-2 gap-6">
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-6 w-6 text-primary"/>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Ubicación</p>
+                    <p className="font-bold">{production.location}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-6 w-6 text-primary"/>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Cosecha Estimada</p>
+                    <p className="font-bold">{new Date(production.estimatedHarvestDate).toLocaleDateString('es-CO', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Target className="h-6 w-6 text-primary"/>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Área</p>
+                    <p className="font-bold">{production.area} hectáreas</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <BarChart3 className="h-6 w-6 text-primary"/>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Estado</p>
+                    <Badge variant="secondary">{production.status}</Badge>
+                  </div>
+                </div>
+                <div className="sm:col-span-2">
+                  <div className='flex justify-between items-center mb-2'>
+                    <p className="text-lg font-medium text-muted-foreground">Progreso de la Cosecha</p>
+                    <p className="text-lg font-bold text-primary">{production.progress}%</p>
+                  </div>
+                  <Progress value={production.progress} aria-label={`${production.progress}% completado`} />
+                </div>
+                {production.workPlan && (
+                  <div className="sm:col-span-2 grid grid-cols-2 gap-4 pt-4 border-t">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Inversión Total</p>
+                      <p className="text-xl font-bold text-green-600">{formatCurrency(production.workPlan.totalInvestment)}</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <Calendar className="h-8 w-8 text-primary"/>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Cosecha Estimada</p>
-                            <p className="font-bold">{new Date(production.estimatedHarvestDate).toLocaleDateString('es-CO', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
-                        </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Rentabilidad Esperada</p>
+                      <p className="text-xl font-bold text-blue-600">{formatCurrency(production.workPlan.profitabilityAnalysis?.netProfit || 0)}</p>
                     </div>
-                    <div className="sm:col-span-2">
-                        <div className='flex justify-between items-center mb-2'>
-                            <p className="text-lg font-medium text-muted-foreground">Progreso de la Cosecha</p>
-                            <p className="text-lg font-bold text-primary">{production.progress}%</p>
-                        </div>
-                        <Progress value={production.progress} aria-label={`${production.progress}% completado`} />
-                    </div>
-                </CardContent>
+                  </div>
+                )}
+              </CardContent>
             </Card>
 
-            <Card className="shadow-lg">
-                <CardHeader>
-                    <CardTitle className="text-3xl flex items-center gap-3"><Inbox />Ofertas Recibidas</CardTitle>
-                    <CardDescription>Gestiona las ofertas de los compradores para este producto.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {areOffersLoading && <Loader2 className="animate-spin" />}
-                    {offers && offers.length > 0 ? offers.map(offer => (
-                        <Card key={offer.id} className="p-4">
-                            <div className="flex flex-wrap justify-between items-start gap-4">
-                                <div>
-                                    <p className="font-bold">{offer.buyerName || 'Comprador Anónimo'}</p>
-                                    <p className="text-sm text-muted-foreground">{offer.amount} kg a {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(offer.pricePerUnit)}/kg</p>
-                                    <p className="text-lg font-bold text-primary">{new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(offer.amount * offer.pricePerUnit)}</p>
-                                </div>
-                                <div className='flex flex-col items-end gap-2'>
-                                    <Badge className={cn("text-sm capitalize", statusStyles[offer.status])}>
-                                        {offer.status}
-                                    </Badge>
-                                    {offer.status === 'pendiente' && (
-                                        <div className="flex gap-2">
-                                            <Button size="sm" onClick={() => handleOfferStatusChange(offer.id, 'aceptada')}><Check className="mr-2 h-4 w-4"/>Aceptar</Button>
-                                            <Button size="sm" variant="destructive" onClick={() => handleOfferStatusChange(offer.id, 'rechazada')}><X className="mr-2 h-4 w-4"/>Rechazar</Button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </Card>
-                    )) : (
-                        <p className="text-muted-foreground text-center py-4">No hay ofertas para este producto todavía.</p>
-                    )}
-                </CardContent>
-            </Card>
-            
-        </div>
-        
-        <div className="space-y-8">
-            <Card className="shadow-lg sticky top-8">
-                <CardHeader>
-                    <CardTitle className="text-3xl flex items-center gap-3"><ListOrdered/>Trazabilidad</CardTitle>
-                    <CardDescription>Añade un nuevo evento a la línea de tiempo de este producto.</CardDescription>
-                </CardHeader>
-                <form onSubmit={handleAddActivity}>
-                    <CardContent className="space-y-4">
-                       <div className="space-y-2">
-                            <Label htmlFor="activity-description">Descripción de la Actividad</Label>
-                            <Textarea 
-                                id="activity-description" 
-                                placeholder="Ej: Aplicación de fertilizante orgánico."
-                                value={newActivityDescription}
-                                onChange={(e) => setNewActivityDescription(e.target.value)}
-                            />
+            <div className="space-y-6">
+              {/* Métricas Rápidas */}
+              {production.workPlan && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-xl">Métricas Clave</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">ROI Esperado</span>
+                      <span className="font-bold text-green-600">
+                        {(production.workPlan.profitabilityAnalysis?.roi || 0).toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Margen de Ganancia</span>
+                      <span className="font-bold">
+                        {(production.workPlan.profitabilityAnalysis?.profitMargin || 0).toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Duración Total</span>
+                      <span className="font-bold">{production.workPlan.totalDuration} días</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Fases del Proyecto</span>
+                      <span className="font-bold">{production.workPlan.phases?.length || 0}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Fase Actual */}
+              {currentPhase && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-xl flex items-center gap-2">
+                      <Sprout className="h-5 w-5" />
+                      Fase Actual
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <h3 className="font-bold text-lg mb-2">{currentPhase.name}</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Duración: {currentPhase.duration} días
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Costo estimado: {formatCurrency(currentPhase.estimatedCost)}
+                    </p>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Actividades principales:</p>
+                      {currentPhase.activities?.slice(0, 3).map((activity, index) => (
+                        <div key={index} className="text-sm text-muted-foreground">
+                          • {activity.name}
                         </div>
-                    </CardContent>
-                    <CardFooter>
-                         <Button type="submit" className="w-full h-12 text-lg" disabled={isAddingActivity || !newActivityDescription.trim()}>
-                            {isAddingActivity ? <Loader2 className="animate-spin" /> : <><PlusCircle className="mr-3 h-6 w-6"/>Añadir Actividad</>}
-                        </Button>
-                    </CardFooter>
-                </form>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Tab Planificación - Plan de Trabajo Completo */}
+        <TabsContent value="planificacion">
+          {production.workPlan ? (
+            <WorkPlanDisplay workPlan={production.workPlan} />
+          ) : (
+            <Card>
+              <CardContent className="text-center py-12">
+                <BookOpen className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No hay plan de trabajo disponible</h3>
+                <p className="text-muted-foreground mb-6">
+                  Este producto no tiene un plan de trabajo comprehensive generado.
+                </p>
+                <Button>
+                  <PlusCircle className="w-4 h-4 mr-2" />
+                  Generar Plan de Trabajo
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Tab Cronograma */}
+        <TabsContent value="cronograma" className="space-y-6">
+          {production.workPlan?.phases ? (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-2xl flex items-center gap-3">
+                    <Calendar className="h-6 w-6" />
+                    Cronograma de Fases
+                  </CardTitle>
+                  <CardDescription>
+                    Timeline detallado de todas las fases del proyecto
+                  </CardDescription>
+                </CardHeader>
                 <CardContent>
-                    <h4 className='font-bold mb-4'>Historial de Actividades</h4>
-                    <div className="relative border-l-2 border-primary ml-4 pl-8 space-y-8 py-4 max-h-96 overflow-y-auto">
-                        <div className="absolute -left-4 top-0 h-8 w-8 bg-primary rounded-full flex items-center justify-center">
-                            <Sprout className="h-5 w-5 text-primary-foreground"/>
+                  <div className="relative">
+                    {production.workPlan.phases.map((phase, index) => {
+                      const isCurrentPhase = currentPhase?.name === phase.name;
+                      const plantingDate = new Date(production.plantingDate);
+                      let phaseStartDate = new Date(plantingDate);
+                      
+                      // Calcular fecha de inicio basada en fases anteriores
+                      for (let i = 0; i < index; i++) {
+                        phaseStartDate.setDate(phaseStartDate.getDate() + production.workPlan!.phases[i].duration);
+                      }
+                      
+                      const phaseEndDate = new Date(phaseStartDate);
+                      phaseEndDate.setDate(phaseEndDate.getDate() + phase.duration);
+
+                      return (
+                        <div 
+                          key={index} 
+                          className={cn(
+                            "relative border-l-4 ml-4 pl-8 pb-8",
+                            isCurrentPhase ? "border-green-500" : "border-gray-200"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute -left-3 top-0 h-6 w-6 rounded-full flex items-center justify-center",
+                            isCurrentPhase ? "bg-green-500 text-white" : "bg-gray-200 text-gray-600"
+                          )}>
+                            {index + 1}
+                          </div>
+                          
+                          <Card className={cn(
+                            "transition-all duration-200",
+                            isCurrentPhase ? "ring-2 ring-green-500 shadow-lg" : ""
+                          )}>
+                            <CardHeader>
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <CardTitle className={cn(
+                                    "text-lg",
+                                    isCurrentPhase ? "text-green-700" : ""
+                                  )}>
+                                    {phase.name}
+                                  </CardTitle>
+                                  <CardDescription>
+                                    {format(phaseStartDate, "dd MMM yyyy", { locale: es })} - {format(phaseEndDate, "dd MMM yyyy", { locale: es })}
+                                  </CardDescription>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-sm text-muted-foreground">Duración</div>
+                                  <div className="font-bold">{phase.duration} días</div>
+                                  <div className="text-sm text-muted-foreground mt-1">Costo</div>
+                                  <div className="font-bold text-green-600">{formatCurrency(phase.estimatedCost)}</div>
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-4">
+                                <div>
+                                  <h4 className="font-medium mb-2">Actividades principales:</h4>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                    {phase.activities?.map((activity, actIndex) => (
+                                      <div key={actIndex} className="text-sm p-2 bg-gray-50 rounded">
+                                        <div className="font-medium">{activity.name}</div>
+                                        <div className="text-muted-foreground text-xs">
+                                          {activity.duration} días • {formatCurrency(activity.cost)}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                                
+                                {phase.resources && phase.resources.length > 0 && (
+                                  <div>
+                                    <h4 className="font-medium mb-2">Recursos necesarios:</h4>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                                      {phase.resources.slice(0, 4).map((resource, resIndex) => (
+                                        <div key={resIndex} className="p-2 border rounded">
+                                          <div className="font-medium truncate">{resource.name}</div>
+                                          <div className="text-muted-foreground">
+                                            {resource.quantity} {resource.unit}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
                         </div>
-                        {production.activities && production.activities.length > 0 ? production.activities.map((activity, index) => (
-                            <div key={index} className="relative">
-                                <div className="absolute -left-[2.1rem] top-1.5 h-4 w-4 bg-background border-2 border-primary rounded-full" />
-                                <p className="font-bold text-primary text-sm">{format(new Date(activity.date), "d MMM yyyy, h:mm a", {locale: es})}</p>
-                                <h3 className="text-base font-semibold mt-1">{activity.description}</h3>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="text-center py-12">
+                <Calendar className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No hay cronograma disponible</h3>
+                <p className="text-muted-foreground">
+                  Genere un plan de trabajo comprehensive para ver el cronograma detallado.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Tab Lista de Chequeo */}
+        <TabsContent value="chequeo" className="space-y-6">
+          {production.workPlan?.phases ? (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-2xl flex items-center gap-3">
+                    <ClipboardList className="h-6 w-6" />
+                    Lista de Chequeo por Fases
+                  </CardTitle>
+                  <CardDescription>
+                    Marque las tareas completadas para realizar seguimiento del progreso
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              {production.workPlan.phases.map((phase, phaseIndex) => {
+                const totalTasks = phase.activities?.length || 0;
+                const completedTasksCount = phase.activities?.filter((_, taskIndex) => 
+                  completedTasks[`${phaseIndex}-${taskIndex}`]
+                ).length || 0;
+                const phaseProgress = totalTasks > 0 ? (completedTasksCount / totalTasks) * 100 : 0;
+                
+                return (
+                  <Card key={phaseIndex}>
+                    <CardHeader>
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-lg">{phase.name}</CardTitle>
+                        <Badge variant={phaseProgress === 100 ? "default" : "secondary"}>
+                          {completedTasksCount}/{totalTasks} completadas
+                        </Badge>
+                      </div>
+                      <Progress value={phaseProgress} className="mt-2" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {phase.activities?.map((activity, taskIndex) => {
+                          const taskKey = `${phaseIndex}-${taskIndex}`;
+                          const isCompleted = completedTasks[taskKey] || false;
+                          
+                          return (
+                            <div key={taskIndex} className="flex items-start space-x-3 p-3 border rounded-lg">
+                              <Checkbox
+                                id={taskKey}
+                                checked={isCompleted}
+                                onCheckedChange={(checked) => handleTaskToggle(phaseIndex.toString(), taskIndex.toString(), checked as boolean)}
+                                className="mt-1"
+                              />
+                              <div className="flex-1">
+                                <label 
+                                  htmlFor={taskKey} 
+                                  className={cn(
+                                    "font-medium cursor-pointer",
+                                    isCompleted ? "line-through text-muted-foreground" : ""
+                                  )}
+                                >
+                                  {activity.name}
+                                </label>
+                                <p className="text-sm text-muted-foreground mt-1">{activity.description}</p>
+                                <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
+                                  <span>⏱️ {activity.duration} días</span>
+                                  <span>💰 {formatCurrency(activity.cost)}</span>
+                                  {activity.materials?.length > 0 && (
+                                    <span>📦 {activity.materials.length} materiales</span>
+                                  )}
+                                </div>
+                              </div>
+                              {isCompleted && (
+                                <CheckCircle className="h-5 w-5 text-green-600 mt-1" />
+                              )}
                             </div>
-                        )).reverse() : <p className="text-sm text-muted-foreground">No hay actividades registradas.</p>}
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="text-center py-12">
+                <ClipboardList className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No hay lista de chequeo disponible</h3>
+                <p className="text-muted-foreground">
+                  Genere un plan de trabajo comprehensive para acceder a la lista de chequeo detallada.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Tab Ofertas */}
+        <TabsContent value="ofertas">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl flex items-center gap-3">
+                <Inbox className="h-6 w-6" />
+                Ofertas Recibidas
+              </CardTitle>
+              <CardDescription>Gestiona las ofertas de los compradores para este producto.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {areOffersLoading && <Loader2 className="animate-spin" />}
+              {offers && offers.length > 0 ? offers.map(offer => (
+                <Card key={offer.id} className="p-4">
+                  <div className="flex flex-wrap justify-between items-start gap-4">
+                    <div>
+                      <p className="font-bold">{offer.buyerName || 'Comprador Anónimo'}</p>
+                      <p className="text-sm text-muted-foreground">{offer.amount} kg a {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(offer.pricePerUnit)}/kg</p>
+                      <p className="text-lg font-bold text-primary">{new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(offer.amount * offer.pricePerUnit)}</p>
+                    </div>
+                    <div className='flex flex-col items-end gap-2'>
+                      <Badge className={cn("text-sm capitalize", statusStyles[offer.status])}>
+                        {offer.status}
+                      </Badge>
+                      {offer.status === 'pendiente' && (
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => handleOfferStatusChange(offer.id, 'aceptada')}>
+                            <Check className="mr-2 h-4 w-4"/>Aceptar
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => handleOfferStatusChange(offer.id, 'rechazada')}>
+                            <X className="mr-2 h-4 w-4"/>Rechazar
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              )) : (
+                <p className="text-muted-foreground text-center py-4">No hay ofertas para este producto todavía.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab Trazabilidad */}
+        <TabsContent value="trazabilidad">
+          <div className="grid lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl flex items-center gap-3">
+                  <ListOrdered className="h-6 w-6"/>
+                  Añadir Actividad
+                </CardTitle>
+                <CardDescription>Registra nuevos eventos en la línea de tiempo de este producto.</CardDescription>
+              </CardHeader>
+              <form onSubmit={handleAddActivity}>
+                <CardContent className="space-y-4">
+                   <div className="space-y-2">
+                        <Label htmlFor="activity-description">Descripción de la Actividad</Label>
+                        <Textarea 
+                            id="activity-description" 
+                            placeholder="Ej: Aplicación de fertilizante orgánico."
+                            value={newActivityDescription}
+                            onChange={(e) => setNewActivityDescription(e.target.value)}
+                        />
                     </div>
                 </CardContent>
+                <CardFooter>
+                     <Button type="submit" className="w-full h-12 text-lg" disabled={isAddingActivity || !newActivityDescription.trim()}>
+                        {isAddingActivity ? <Loader2 className="animate-spin" /> : <><PlusCircle className="mr-3 h-6 w-6"/>Añadir Actividad</>}
+                    </Button>
+                </CardFooter>
+              </form>
             </Card>
-        </div>
-      </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl">Historial de Actividades</CardTitle>
+                <CardDescription>Línea de tiempo completa del producto</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="relative border-l-2 border-primary ml-4 pl-8 space-y-8 py-4 max-h-96 overflow-y-auto">
+                  <div className="absolute -left-4 top-0 h-8 w-8 bg-primary rounded-full flex items-center justify-center">
+                    <Sprout className="h-5 w-5 text-primary-foreground"/>
+                  </div>
+                  {production.activities && production.activities.length > 0 ? production.activities.map((activity, index) => (
+                    <div key={index} className="relative">
+                      <div className="absolute -left-[2.1rem] top-1.5 h-4 w-4 bg-background border-2 border-primary rounded-full" />
+                      <p className="font-bold text-primary text-sm">{format(new Date(activity.date), "d MMM yyyy, h:mm a", {locale: es})}</p>
+                      <h3 className="text-base font-semibold mt-1">{activity.description}</h3>
+                    </div>
+                  )).reverse() : <p className="text-sm text-muted-foreground">No hay actividades registradas.</p>}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

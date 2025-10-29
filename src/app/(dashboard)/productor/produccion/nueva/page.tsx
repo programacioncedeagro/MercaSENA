@@ -11,15 +11,17 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Bot, Loader2, Wand2, CheckCircle } from 'lucide-react';
+import { CalendarIcon, Bot, Loader2, Wand2, CheckCircle, FileText, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
-import { getHarvestEstimateAction } from '@/app/actions';
+import { getHarvestEstimateAction, generateComprehensiveWorkPlanAction } from '@/app/actions';
 import type { ProjectedHarvestEstimatesOutput } from '@/ai/flows/projected-harvest-estimates';
+import type { ComprehensiveWorkPlanOutput } from '@/ai/flows/comprehensive-work-plan';
 import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import { WorkPlanDisplay } from '@/components/work-plan-display';
 
 const productionSchema = z.object({
   name: z.string().min(1, 'El nombre del producto es requerido.'),
@@ -36,6 +38,9 @@ export default function NewProductionPage() {
   const [isEstimating, setIsEstimating] = useState(false);
   const [estimationResult, setEstimationResult] = useState<ProjectedHarvestEstimatesOutput | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+  const [workPlan, setWorkPlan] = useState<ComprehensiveWorkPlanOutput | null>(null);
+  const [showPlan, setShowPlan] = useState(false);
   
   const firestore = useFirestore();
   const { user } = useUser();
@@ -49,13 +54,13 @@ export default function NewProductionPage() {
 
   const handleEstimate: React.MouseEventHandler<HTMLButtonElement> = async (e) => {
     e.preventDefault();
-    const { name, plantingDate, location } = watchedFields;
+    const { name, plantingDate, location, area } = watchedFields;
 
-    if (!name || !plantingDate || !location) {
+    if (!name || !plantingDate || !location || !area) {
       toast({
         variant: "destructive",
         title: "Faltan datos para la estimación",
-        description: "Por favor, completa el nombre del producto, la fecha de siembra y la ubicación.",
+        description: "Por favor, completa el nombre del producto, fecha de siembra, ubicación y área.",
       });
       return;
     }
@@ -67,6 +72,7 @@ export default function NewProductionPage() {
       cropType: name,
       plantingDate: format(plantingDate, 'yyyy-MM-dd'),
       location,
+      area,
     });
 
     setIsEstimating(false);
@@ -81,6 +87,48 @@ export default function NewProductionPage() {
       toast({
         variant: "destructive",
         title: "Error en la estimación",
+        description: result.error,
+      });
+    }
+  };
+
+  const handleGenerateWorkPlan: React.MouseEventHandler<HTMLButtonElement> = async (e) => {
+    e.preventDefault();
+    const { name, plantingDate, location, area } = watchedFields;
+
+    if (!name || !plantingDate || !location || !area) {
+      toast({
+        variant: "destructive",
+        title: "Faltan datos para generar el plan",
+        description: "Por favor, completa todos los campos antes de generar el plan de trabajo.",
+      });
+      return;
+    }
+
+    setIsGeneratingPlan(true);
+    setWorkPlan(null);
+
+    const result = await generateComprehensiveWorkPlanAction({
+      cropType: name,
+      area: Number(area),
+      location,
+      plantingDate: format(plantingDate, 'yyyy-MM-dd'),
+      experience: 'Intermedio' // Puedes hacer esto configurable más adelante
+    });
+
+    setIsGeneratingPlan(false);
+
+    if (result.success && result.data) {
+      setWorkPlan(result.data);
+      setShowPlan(true);
+      toast({
+        title: "Plan de Trabajo Generado",
+        description: "Se ha creado un plan completo con metodología 5M, cronograma y análisis de rentabilidad.",
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Error generando el plan",
         description: result.error,
       });
     }
@@ -106,6 +154,18 @@ export default function NewProductionPage() {
         status: 'Planeación',
         producerId: user.uid,
         createdAt: new Date().toISOString(),
+        // Incluir el plan de trabajo si está disponible
+        workPlan: workPlan ? {
+          ...workPlan,
+          // Remover las imágenes para no sobrecargar Firebase (se pueden guardar por separado)
+          generatedImages: workPlan.generatedImages.map(img => ({
+            description: img.description,
+            phase: img.phase,
+            size: img.size,
+            // Solo guardar un identificador o URL, no el base64 completo
+            imageId: `${user.uid}_${Date.now()}_${img.phase}`
+          }))
+        } : null,
     };
     
     const productionsRef = collection(firestore, 'users', user.uid, 'productions');
@@ -213,18 +273,179 @@ export default function NewProductionPage() {
               )}
             </Button>
             {estimationResult && (
-              <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg space-y-3">
-                 <h3 className="font-bold text-lg flex items-center gap-2"><CheckCircle className="text-primary"/> ¡Estimación Lista!</h3>
-                 <p><strong>Fecha de Cosecha Estimada:</strong> {format(new Date(estimationResult.estimatedHarvestDate), 'EEEE, d \'de\' MMMM \'de\' yyyy', { locale: es })}</p>
-                 <p><strong>Nivel de Confianza:</strong> {estimationResult.confidenceLevel}</p>
-                 <div>
-                    <strong>Justificación:</strong>
-                    <p className="text-sm text-muted-foreground mt-1">{estimationResult.reasoning}</p>
-                 </div>
+              <div className="space-y-6">
+                <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg space-y-3">
+                  <h3 className="font-bold text-lg flex items-center gap-2">
+                    <CheckCircle className="text-primary"/> ¡Estimación de Cosecha Lista!
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p><strong>Fecha de Cosecha Estimada:</strong></p>
+                      <p className="text-lg font-semibold text-primary">
+                        {format(new Date(estimationResult.estimatedHarvestDate), 'EEEE, d \'de\' MMMM \'de\' yyyy', { locale: es })}
+                      </p>
+                    </div>
+                    {estimationResult.optimalHarvestWindow && (
+                      <div>
+                        <p><strong>Ventana Óptima de Cosecha:</strong></p>
+                        <p className="text-sm">
+                          {format(new Date(estimationResult.optimalHarvestWindow.startDate), 'dd/MM', { locale: es })} - {format(new Date(estimationResult.optimalHarvestWindow.endDate), 'dd/MM/yyyy', { locale: es })}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <p><strong>Nivel de Confianza:</strong> {estimationResult.confidenceLevel}</p>
+                </div>
+
+                {estimationResult.marketAnalysis && (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg space-y-3">
+                    <h4 className="font-semibold text-green-800">Análisis de Mercado</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p><strong>Precios Actuales:</strong></p>
+                        <p className="text-green-700">{estimationResult.marketAnalysis.currentPrices}</p>
+                      </div>
+                      <div>
+                        <p><strong>Proyección de Precios:</strong></p>
+                        <p className="text-green-700">{estimationResult.marketAnalysis.priceProjection}</p>
+                      </div>
+                      <div>
+                        <p><strong>Demanda Proyectada:</strong></p>
+                        <p className="text-green-700">{estimationResult.marketAnalysis.demandForecast}</p>
+                      </div>
+                      <div>
+                        <p><strong>Estrategia Recomendada:</strong></p>
+                        <p className="text-green-700">{estimationResult.marketAnalysis.recommendedStrategy}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {estimationResult.qualityFactors && (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
+                    <h4 className="font-semibold text-blue-800">Factores de Calidad</h4>
+                    <div className="text-sm space-y-2">
+                      <div>
+                        <p><strong>Madurez Óptima:</strong></p>
+                        <p className="text-blue-700">{estimationResult.qualityFactors.optimalRipeness}</p>
+                      </div>
+                      <div>
+                        <p><strong>Almacenamiento:</strong></p>
+                        <p className="text-blue-700">{estimationResult.qualityFactors.storageRecommendations}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {estimationResult.riskFactors && (
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg space-y-3">
+                    <h4 className="font-semibold text-yellow-800">Análisis de Riesgos</h4>
+                    <div className="text-sm space-y-2">
+                      <div>
+                        <p><strong>Riesgos Climáticos:</strong></p>
+                        <p className="text-yellow-700">{estimationResult.riskFactors.weatherRisks}</p>
+                      </div>
+                      <div>
+                        <p><strong>Estrategias de Mitigación:</strong></p>
+                        <p className="text-yellow-700">{estimationResult.riskFactors.mitigationStrategies}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <strong>Justificación del Análisis:</strong>
+                  <p className="text-sm text-muted-foreground mt-1 bg-gray-50 p-3 rounded">
+                    {estimationResult.reasoning}
+                  </p>
+                </div>
+
+                {estimationResult.generatedImages && estimationResult.generatedImages.length > 0 && (
+                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <h4 className="font-semibold text-purple-800 mb-3">Visualización del Proceso</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {estimationResult.generatedImages.map((img, index) => (
+                        <div key={index} className="text-center">
+                          <div className="bg-gray-200 rounded-lg p-8 mb-2">
+                            <p className="text-sm text-gray-600">Imagen: {img.description}</p>
+                            <p className="text-xs text-gray-500 mt-1">Fase: {img.phase}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Nueva sección para generar plan de trabajo completo */}
+        <Card className="shadow-lg border-green-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="text-green-600" />
+              Plan de Trabajo Integral con IA
+            </CardTitle>
+            <CardDescription>
+              Genera un plan completo basado en metodología 5M con cronograma, análisis de mercado, 
+              rentabilidad y agroindustrialización. Incluye imágenes ilustrativas generadas por IA.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <Button
+              onClick={handleGenerateWorkPlan}
+              disabled={isGeneratingPlan || !watchedFields.name || !watchedFields.plantingDate || !watchedFields.location || !watchedFields.area}
+              className="w-full h-14 text-lg bg-green-600 hover:bg-green-700"
+            >
+              {isGeneratingPlan ? (
+                <><Loader2 className="mr-2 h-6 w-6 animate-spin" /> Generando Plan Completo...</>
+              ) : (
+                <><Sparkles className="mr-2 h-6 w-6" /> Generar Plan de Trabajo Integral con IA</>
+              )}
+            </Button>
+            
+            {workPlan && (
+              <div className="space-y-4">
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <h3 className="font-bold text-lg flex items-center gap-2 text-green-800">
+                    <CheckCircle className="text-green-600" />
+                    ¡Plan de Trabajo Generado!
+                  </h3>
+                  <p className="text-green-700 mt-2">
+                    Se ha creado un plan completo con metodología 5M, análisis de rentabilidad, 
+                    cronograma detallado y recomendaciones de agroindustrialización.
+                  </p>
+                  <div className="mt-3 flex gap-2">
+                    <Button 
+                      onClick={() => setShowPlan(!showPlan)}
+                      variant="outline"
+                      size="sm"
+                      className="border-green-300 text-green-700 hover:bg-green-100"
+                    >
+                      {showPlan ? 'Ocultar Plan' : 'Ver Plan Detallado'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Mostrar el plan de trabajo si está disponible */}
+        {showPlan && workPlan && (
+          <div className="mt-8">
+            <WorkPlanDisplay 
+              workPlan={workPlan}
+              onSave={() => {
+                toast({
+                  title: "Plan guardado",
+                  description: "El plan de trabajo se ha guardado con la producción",
+                });
+              }}
+            />
+          </div>
+        )}
 
         <div className="flex justify-end">
           <Button type="submit" size="lg" className="h-16 text-xl min-w-[200px]" disabled={isSubmitting || !estimationResult}>

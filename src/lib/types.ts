@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
+import type { ComprehensiveWorkPlanOutput } from '@/ai/flows/comprehensive-work-plan';
 
 export type UserRole = 'productor' | 'comprador';
 
@@ -7,6 +8,26 @@ export type User = {
   name: string;
   email: string;
   role: UserRole;
+}
+
+// Buyer - Comprador
+export interface Buyer {
+  id: string;
+  name: string;
+  email: string;
+  location: string;
+  coordinates?: [number, number];
+  preferredProducts?: string[];
+  budgetRange?: {
+    min: number;
+    max: number;
+  };
+  paymentMethods?: string[];
+  deliveryPreferences?: DeliveryMethod[];
+  favoriteProductionIds?: string[];
+  purchaseOrderIds?: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type ProductionStatus = 'Planeación' | 'Siembra' | 'Crecimiento' | 'Mantenimiento' | 'Cosecha' | 'Postcosecha';
@@ -51,4 +72,153 @@ export type Production = {
   activities?: Activity[];
   traceabilityId?: string;
   offers?: Offer[]; // This might be populated from a sub-collection or separate query
+  // Nuevos campos para georeferenciación y trazabilidad
+  coordinates?: [number, number]; // [lat, lng]
+  divipolaCode?: string;
+  workPlan?: ComprehensiveWorkPlanOutput; // Plan de trabajo completo
+  certifications?: string[];
+  qualityStandards?: string[];
+  currentPrice?: number;
+  totalQuantityAvailable?: number;
+};
+
+// Nuevos tipos para gestión de compras y stock
+export type PurchaseFrequency = 'diario' | 'semanal' | 'quincenal' | 'mensual' | 'bimestral' | 'trimestral' | 'semestral' | 'anual';
+
+export type DeliveryMethod = 'pickup' | 'delivery' | 'shipping' | 'farm_gate';
+
+export type StockMovementType = 'entrada' | 'salida' | 'ajuste' | 'merma';
+
+export type RecurringPurchase = {
+  id: string;
+  buyerId: string;
+  productType: string; // ej: "Papa", "Tomate", etc.
+  quantity: number; // cantidad necesaria
+  frequency: PurchaseFrequency;
+  maxPrice: number; // precio máximo dispuesto a pagar
+  deliveryMethod: DeliveryMethod;
+  location: {
+    address: string;
+    coordinates: [number, number];
+    divipolaCode?: string;
+  };
+  qualityRequirements: string[];
+  isActive: boolean;
+  startDate?: string;
+  endDate?: string;
+  nextPurchaseDate: string;
+  preferredSuppliers?: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type StockItem = {
+  id: string;
+  buyerId?: string;
+  productType: string;
+  productName: string;
+  currentStock: number;
+  minStockLevel: number;
+  maxStockLevel: number;
+  unit: string; // kg, ton, cajas, etc.
+  averageCost: number; // costo promedio
+  lastRestockDate: string;
+  expirationDate?: string;
+  location: string; // bodega, almacén, etc.
+  coordinates?: [number, number];
+  supplierId?: string; // id del productor principal
+  qualityGrade?: 'A' | 'B' | 'C';
+  lastMovements?: StockMovement[];
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type StockMovement = {
+  id: string;
+  stockItemId?: string;
+  type: StockMovementType;
+  quantity: number;
+  unitCost: number;
+  totalCost?: number;
+  reference?: string; // número de compra, venta, etc.
+  reason?: string; // motivo del movimiento
+  description?: string;
+  date: string;
+  userId?: string;
+  supplierInfo?: {
+    id: string;
+    name: string;
+    location: string;
+  };
+};
+
+export type PurchaseOrder = {
+  id: string;
+  buyerId: string;
+  producerId: string;
+  productionId: string;
+  quantity: number;
+  pricePerUnit: number;
+  totalAmount: number;
+  deliveryDate: string;
+  deliveryMethod: DeliveryMethod;
+  deliveryAddress: string;
+  status: 'pendiente' | 'confirmada' | 'en_transito' | 'entregada' | 'cancelada';
+  paymentTerms: string;
+  qualityRequirements: string[];
+  notes?: string;
+  trackingInfo?: {
+    dispatchDate?: string;
+    estimatedArrival?: string;
+    currentLocation?: string;
+    deliveryConfirmation?: {
+      date: string;
+      receivedBy: string;
+      qualityCheck: boolean;
+      notes?: string;
+    };
+  };
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type BuyingStrategy = {
+  id: string;
+  buyerId: string;
+  productType: string;
+  strategy: 'spot' | 'contract' | 'futures' | 'mixed';
+  parameters: {
+    maxPriceVariation: number; // %
+    preferredSuppliers: string[];
+    seasonalAdjustments: boolean;
+    qualityOverPrice: boolean;
+    diversificationLevel: number; // 1-5
+  };
+  recommendations: string[];
+  marketAnalysis: {
+    currentTrend: 'bullish' | 'bearish' | 'stable';
+    priceHistory: { date: string; price: number }[];
+    seasonalPatterns: string[];
+    riskFactors: string[];
+  };
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SupplyChainEvent = {
+  id: string;
+  type: 'purchase' | 'delivery' | 'stock_alert' | 'price_change' | 'quality_issue';
+  title: string;
+  description: string;
+  date: string;
+  endDate?: string;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'delayed' | 'cancelled';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  relatedItems: {
+    purchaseOrderId?: string;
+    stockItemId?: string;
+    producerId?: string;
+  };
+  location?: string;
+  cost?: number;
 };

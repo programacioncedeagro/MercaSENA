@@ -37,10 +37,10 @@ export default function DashboardLayout({
   
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Effect 1: Redirect unauthenticated users to login
+  // Effect 1: Redirect unauthenticated users to auth selection page
   useEffect(() => {
     if (!isUserLoading && !user) {
-      router.push('/login');
+      router.push('/auth');
     }
   }, [isUserLoading, user, router]);
 
@@ -77,18 +77,18 @@ export default function DashboardLayout({
 
       // If user is on an auth page but is already logged in, redirect them
       if (isAuthPage) {
-        if (userRole === 'producer') {
+        if (userRole === 'productor') {
           router.replace('/productor');
-        } else if (userRole === 'buyer') {
+        } else if (userRole === 'comprador') {
           router.replace('/comprador');
         }
         return;
       }
 
       // If user is on the wrong dashboard, redirect them
-      if (userRole === 'producer' && !isProducerPath) {
+      if (userRole === 'productor' && !isProducerPath) {
         router.replace('/productor');
-      } else if (userRole === 'buyer' && !isBuyerPath) {
+      } else if (userRole === 'comprador' && !isBuyerPath) {
         router.replace('/comprador');
       }
     }
