@@ -55,9 +55,9 @@ export default function NewProductionPage() {
 
   const handleEstimate: React.MouseEventHandler<HTMLButtonElement> = async (e) => {
     e.preventDefault();
-    const { name, plantingDate, location, area } = watchedFields;
+    const { name, plantingDate, location, area: areaValue } = watchedFields;
 
-    if (!name || !plantingDate || !location || !area) {
+    if (!name || !plantingDate || !location || !areaValue) {
       toast({
         variant: "destructive",
         title: "Faltan datos para la estimación",
@@ -73,7 +73,7 @@ export default function NewProductionPage() {
       cropType: name,
       plantingDate: format(plantingDate, 'yyyy-MM-dd'),
       location,
-      area,
+      area: Number(areaValue),
     });
 
     setIsEstimating(false);
@@ -95,9 +95,9 @@ export default function NewProductionPage() {
 
   const handleGenerateWorkPlan: React.MouseEventHandler<HTMLButtonElement> = async (e) => {
     e.preventDefault();
-    const { name, plantingDate, location, area } = watchedFields;
+    const { name, plantingDate, location, area: areaValue } = watchedFields;
 
-    if (!name || !plantingDate || !location || !area) {
+    if (!name || !plantingDate || !location || !areaValue) {
       toast({
         variant: "destructive",
         title: "Faltan datos para generar el plan",
@@ -111,7 +111,7 @@ export default function NewProductionPage() {
 
     const result = await generateComprehensiveWorkPlanAction({
       cropType: name,
-      area: Number(area),
+      area: Number(areaValue),
       location,
       plantingDate: format(plantingDate, 'yyyy-MM-dd'),
       experience: 'Intermedio' // Puedes hacer esto configurable más adelante
