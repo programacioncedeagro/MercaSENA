@@ -15,12 +15,44 @@ import {
   SidebarProvider,
   SidebarTrigger,
   SidebarFooter,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { DashboardNav } from '@/components/dashboard-nav';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { LogOut, Loader2 } from 'lucide-react';
 import { getAuth, signOut } from 'firebase/auth';
+
+// Componente LogoutButton separado para usar useSidebar
+function LogoutButton() {
+  const { setOpenMobile, isMobile } = useSidebar();
+  const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      const auth = getAuth();
+      await signOut(auth);
+      // Cerrar sidebar en móviles con un delay más natural
+      if (isMobile) {
+        setTimeout(() => setOpenMobile(false), 100);
+      }
+      // Redirect to home after logout
+      router.push('/');
+    } catch (error) {
+      console.error("Error signing out: ", error);
+      setIsLoggingOut(false);
+    }
+  };
+
+  return (
+    <Button variant="ghost" className="w-full justify-start gap-2 h-14 text-base" onClick={handleLogout} disabled={isLoggingOut}>
+      {isLoggingOut ? <Loader2 className="w-6 h-6 animate-spin" /> : <LogOut className="w-6 h-6" />}
+      <span>{isLoggingOut ? 'Cerrando sesión...' : 'Cerrar Sesión'}</span>
+    </Button>
+  );
+}
 
 export default function DashboardLayout({
   children,
@@ -34,8 +66,6 @@ export default function DashboardLayout({
 
   const [userData, setUserData] = useState<UserType | null>(null);
   const [isUserDataLoading, setIsUserDataLoading] = useState(true);
-  
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Effect 1: Redirect unauthenticated users to auth selection page
   useEffect(() => {
@@ -93,19 +123,6 @@ export default function DashboardLayout({
       }
     }
   }, [user, userData, pathname, router]);
-
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    try {
-      const auth = getAuth();
-      await signOut(auth);
-      // Redirect to home after logout
-      router.push('/');
-    } catch (error) {
-      console.error("Error signing out: ", error);
-      setIsLoggingOut(false);
-    }
-  };
   
   const isLoading = isUserLoading || isUserDataLoading;
 
@@ -139,10 +156,7 @@ export default function DashboardLayout({
           <DashboardNav />
         </SidebarContent>
         <SidebarFooter>
-            <Button variant="ghost" className="w-full justify-start gap-2 h-14 text-base" onClick={handleLogout} disabled={isLoggingOut}>
-              {isLoggingOut ? <Loader2 className="w-6 h-6 animate-spin" /> : <LogOut className="w-6 h-6" />}
-              <span>{isLoggingOut ? 'Cerrando sesión...' : 'Cerrar Sesión'}</span>
-            </Button>
+            <LogoutButton />
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>

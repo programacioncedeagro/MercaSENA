@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc } from 'firebase/firestore';
 import { Production, PurchaseOrder, DeliveryMethod, Buyer } from '@/lib/types';
@@ -25,9 +25,20 @@ export default function ProductDetailPage() {
   const [loadingBuyer, setLoadingBuyer] = useState(true);
   
   // Obtener la producción usando la estructura correcta: users/{producerId}/productions/{productId}
-  const productionDocRef = firestore && producerId && productId ? 
-    doc(firestore, 'users', producerId, 'productions', productId) : null;
+  const productionDocRef = useMemoFirebase(() => {
+    if (!firestore || !producerId || !productId) return null;
+    return doc(firestore, 'users', producerId, 'productions', productId);
+  }, [firestore, producerId, productId]);
+  
   const { data: production, isLoading: loadingProduction, error } = useDoc<Production>(productionDocRef);
+
+  // Cargar datos del productor
+  const producerDocRef = useMemoFirebase(() => {
+    if (!firestore || !producerId) return null;
+    return doc(firestore, 'users', producerId);
+  }, [firestore, producerId]);
+  
+  const { data: producer, isLoading: loadingProducer } = useDoc(producerDocRef);
 
   // Cargar datos del comprador para obtener ubicación
   useEffect(() => {
@@ -74,17 +85,24 @@ export default function ProductDetailPage() {
     try {
       const purchaseOrder: Omit<PurchaseOrder, 'id'> = {
         buyerId: user.uid,
+        buyerName: buyerData.name,
         producerId: producerId,
+        producerName: producer?.name || 'Productor',
         productionId: productId,
+        productName: production?.name || 'Producto',
         quantity: offer.quantity,
+        unitPrice: offer.pricePerUnit,
         pricePerUnit: offer.pricePerUnit,
         totalAmount: offer.quantity * offer.pricePerUnit,
         deliveryDate: offer.deliveryDate,
         deliveryMethod: offer.deliveryMethod,
         deliveryAddress: buyerData.location,
         status: 'pendiente',
+        paymentStatus: 'pendiente',
         paymentTerms: 'Contado',
         qualityRequirements: ['Producto fresco', 'Sin daños'],
+        requestedDate: new Date().toISOString(),
+        trackingUpdates: [],
         notes: offer.notes,
         trackingInfo: {},
         createdAt: new Date().toISOString(),

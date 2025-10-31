@@ -95,6 +95,17 @@ export type Production = {
   estimatedDuration?: number; // Duración estimada en días
   totalActivities?: number; // Número total de actividades
   keyMilestones?: number; // Número de hitos clave
+  // Campos para control de inventario y stock
+  expectedQuantity?: number; // Cantidad esperada antes de cosecha
+  harvestedQuantity?: number; // Cantidad real cosechada
+  availableQuantity?: number; // Cantidad disponible para venta (después de reservas)
+  reservedQuantity?: number; // Cantidad reservada por pedidos pendientes
+  soldQuantity?: number; // Cantidad ya vendida y despachada
+  unitPrice?: number; // Precio por kilogramo o unidad
+  minOrderQuantity?: number; // Cantidad mínima de pedido
+  maxOrderQuantity?: number; // Cantidad máxima por pedido
+  harvestDate?: string; // Fecha real de cosecha (cuando esté lista)
+  isHarvested?: boolean; // Indica si ya fue cosechado
 };
 
 // Nuevos tipos para gestión de compras y stock
@@ -103,6 +114,79 @@ export type PurchaseFrequency = 'diario' | 'semanal' | 'quincenal' | 'mensual' |
 export type DeliveryMethod = 'pickup' | 'delivery' | 'shipping' | 'farm_gate';
 
 export type StockMovementType = 'entrada' | 'salida' | 'ajuste' | 'merma';
+
+// Sistema de estados de pedidos para trazabilidad
+export type OrderStatus = 'pendiente' | 'confirmado' | 'preparando' | 'listo' | 'enviado' | 'entregado' | 'cancelado' | 'en_transito';
+
+export type PaymentStatus = 'pendiente' | 'pagado' | 'parcial' | 'reembolsado';
+
+export type PurchaseOrder = {
+  id: string;
+  buyerId: string;
+  buyerName: string;
+  producerId: string;
+  producerName: string;
+  productionId: string;
+  productName: string;
+  quantity: number; // cantidad solicitada en kg
+  unitPrice: number; // precio por kg
+  pricePerUnit: number; // compatibilidad - alias de unitPrice
+  totalAmount: number; // cantidad total a pagar
+  status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  paymentTerms?: string; // términos de pago
+  deliveryMethod: DeliveryMethod;
+  deliveryAddress?: string;
+  deliveryDate?: string; // fecha de entrega estimada
+  deliveryCoordinates?: [number, number];
+  notes?: string;
+  requestedDate: string; // fecha cuando se hizo el pedido
+  confirmedDate?: string; // fecha cuando el productor confirmó
+  estimatedDeliveryDate?: string;
+  actualDeliveryDate?: string;
+  trackingUpdates: TrackingUpdate[];
+  trackingInfo?: {
+    dispatchDate?: string;
+    estimatedArrival?: string;
+    currentLocation?: string;
+    deliveryConfirmation?: {
+      date: string;
+      receivedBy: string;
+      qualityCheck: boolean;
+      notes?: string;
+    };
+  };
+  qualityRequirements?: string[];
+  certifications?: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TrackingUpdate = {
+  id: string;
+  timestamp: string;
+  status: OrderStatus;
+  message: string;
+  location?: string;
+  coordinates?: [number, number];
+  photos?: string[];
+  updatedBy: string; // userId who made the update
+  updatedByRole: 'productor' | 'comprador' | 'transportador';
+};
+
+export type InventoryMovement = {
+  id: string;
+  productionId: string;
+  movementType: StockMovementType;
+  quantity: number;
+  reason: string;
+  orderId?: string; // si está relacionado con un pedido
+  previousQuantity: number;
+  newQuantity: number;
+  timestamp: string;
+  createdBy: string; // userId
+  notes?: string;
+};
 
 export type RecurringPurchase = {
   id: string;
@@ -165,36 +249,6 @@ export type StockMovement = {
     name: string;
     location: string;
   };
-};
-
-export type PurchaseOrder = {
-  id: string;
-  buyerId: string;
-  producerId: string;
-  productionId: string;
-  quantity: number;
-  pricePerUnit: number;
-  totalAmount: number;
-  deliveryDate: string;
-  deliveryMethod: DeliveryMethod;
-  deliveryAddress: string;
-  status: 'pendiente' | 'confirmada' | 'en_transito' | 'entregada' | 'cancelada';
-  paymentTerms: string;
-  qualityRequirements: string[];
-  notes?: string;
-  trackingInfo?: {
-    dispatchDate?: string;
-    estimatedArrival?: string;
-    currentLocation?: string;
-    deliveryConfirmation?: {
-      date: string;
-      receivedBy: string;
-      qualityCheck: boolean;
-      notes?: string;
-    };
-  };
-  createdAt: string;
-  updatedAt: string;
 };
 
 export type BuyingStrategy = {

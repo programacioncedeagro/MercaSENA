@@ -44,18 +44,25 @@ const mockPurchaseOrders: PurchaseOrder[] = [
   {
     id: '1',
     buyerId: 'buyer1',
+    buyerName: 'María González',
     producerId: 'prod1',
+    producerName: 'Finca Los Rosales',
     productionId: 'production1',
+    productName: 'Tomate',
     quantity: 100,
+    unitPrice: 2500,
     pricePerUnit: 2500,
     totalAmount: 250000,
     deliveryDate: '2024-12-30',
     deliveryMethod: 'delivery',
     deliveryAddress: 'Bogotá, Colombia',
-    status: 'confirmada',
+    status: 'confirmado',
+    paymentStatus: 'pendiente',
     paymentTerms: 'Contado',
     qualityRequirements: ['Producto fresco', 'Sin daños'],
     notes: 'Entrega urgente para eventos navideños',
+    requestedDate: '2024-12-20T10:00:00Z',
+    trackingUpdates: [],
     trackingInfo: {
       dispatchDate: '2024-12-28',
       estimatedArrival: '2024-12-30',
@@ -67,17 +74,24 @@ const mockPurchaseOrders: PurchaseOrder[] = [
   {
     id: '2',
     buyerId: 'buyer1',
+    buyerName: 'María González',
     producerId: 'prod2',
+    producerName: 'Hacienda San Pedro',
     productionId: 'production2',
+    productName: 'Lechuga',
     quantity: 50,
+    unitPrice: 1800,
     pricePerUnit: 1800,
     totalAmount: 90000,
     deliveryDate: '2025-01-15',
     deliveryMethod: 'pickup',
     deliveryAddress: 'Finca El Rosal, Cundinamarca',
     status: 'pendiente',
+    paymentStatus: 'pendiente',
     paymentTerms: 'Contado',
     qualityRequirements: ['Certificación orgánica'],
+    requestedDate: '2024-12-25T14:30:00Z',
+    trackingUpdates: [],
     createdAt: '2024-12-25T14:30:00Z',
     updatedAt: '2024-12-25T14:30:00Z'
   }
@@ -170,20 +184,20 @@ export default function ComprasAdvancedPage() {
 
   const getStatusColor = (status: PurchaseOrder['status']) => {
     switch (status) {
-      case 'confirmada': return 'bg-blue-500';
+      case 'confirmado': return 'bg-blue-500';
       case 'en_transito': return 'bg-yellow-500';
-      case 'entregada': return 'bg-green-500';
-      case 'cancelada': return 'bg-red-500';
+      case 'entregado': return 'bg-green-500';
+      case 'cancelado': return 'bg-red-500';
       default: return 'bg-gray-500';
     }
   };
 
   const getStatusIcon = (status: PurchaseOrder['status']) => {
     switch (status) {
-      case 'confirmada': return <CheckCircle className="w-4 h-4" />;
+      case 'confirmado': return <CheckCircle className="w-4 h-4" />;
       case 'en_transito': return <Truck className="w-4 h-4" />;
-      case 'entregada': return <Package className="w-4 h-4" />;
-      case 'cancelada': return <AlertCircle className="w-4 h-4" />;
+      case 'entregado': return <Package className="w-4 h-4" />;
+      case 'cancelado': return <AlertCircle className="w-4 h-4" />;
       default: return <Clock className="w-4 h-4" />;
     }
   };
@@ -308,8 +322,8 @@ export default function ComprasAdvancedPage() {
                       <SelectItem value="pendiente">Pendientes</SelectItem>
                       <SelectItem value="confirmada">Confirmadas</SelectItem>
                       <SelectItem value="en_transito">En Tránsito</SelectItem>
-                      <SelectItem value="entregada">Entregadas</SelectItem>
-                      <SelectItem value="cancelada">Canceladas</SelectItem>
+                      <SelectItem value="entregado">Entregadas</SelectItem>
+                      <SelectItem value="cancelado">Canceladas</SelectItem>
                     </SelectContent>
                   </Select>
                   <Button variant="outline" size="sm">
@@ -337,7 +351,7 @@ export default function ComprasAdvancedPage() {
                           <div className="flex items-center gap-4 text-sm text-gray-600">
                             <div className="flex items-center gap-1">
                               <Calendar className="w-4 h-4" />
-                              <span>Entrega: {format(new Date(order.deliveryDate), 'PPP', { locale: es })}</span>
+                              <span>Entrega: {order.deliveryDate ? format(new Date(order.deliveryDate), 'PPP', { locale: es }) : 'Por definir'}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <MapPin className="w-4 h-4" />

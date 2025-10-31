@@ -1,0 +1,53 @@
+{
+  "name": "MercaSENA - Plataforma Agropecuaria",
+  "short_name": "MercaSENA",
+  "description": "Plataforma integral para productores y compradores agropecuarios con IA",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#059669",
+  "orientation": "portrait-primary",
+  "categories": ["agriculture", "business", "productivity"],
+  "lang": "es",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "32x32",
+      "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nueva Producción",
+      "short_name": "Nueva",
+      "description": "Crear nueva producción agrícola",
+      "url": "/productor/produccion/nueva",
+      "icons": [{ "src": "/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Mercado",
+      "short_name": "Mercado",
+      "description": "Explorar productos disponibles",
+      "url": "/comprador",
+      "icons": [{ "src": "/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Mis Producciones",
+      "short_name": "Producciones",
+      "description": "Ver mis producciones",
+      "url": "/productor/produccion",
+      "icons": [{ "src": "/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "protocol_handlers": [],
+  "edge_side_includes": false
+}

@@ -1,8 +1,48 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
 
+/* Optimizaciones para dispositivos de gama baja */
 @layer base {
+  /* Mejorar rendering performance */
+  * {
+    box-sizing: border-box;
+  }
+  
+  html {
+    /* Habilitar smooth scrolling de forma eficiente */
+    scroll-behavior: smooth;
+    /* Mejorar rendering de texto en dispositivos de baja resolución */
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeSpeed;
+  }
+  
+  body {
+    /* Minimizar repaints */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000;
+    /* Optimizar para touch */
+    touch-action: manipulation;
+  }
+  
+  /* Optimizar imágenes para carga rápida */
+  img {
+    max-width: 100%;
+    height: auto;
+    /* Mejorar rendering */
+    image-rendering: optimizeQuality;
+  }
+  
+  /* Optimizar elementos interactivos */
+  button, input, select, textarea {
+    /* Mejorar responsividad en touch */
+    touch-action: manipulation;
+  }
+  
+  /* Variables CSS optimizadas para móviles */
   :root {
     --background: 135 73% 92%;
     --foreground: 145 25% 15%;
@@ -76,15 +116,114 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
   html {
-    @apply text-lg;
+    font-size: 1.125rem;
+    line-height: 1.75rem;
   }
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-headline;
+    font-family: var(--font-headline, ui-serif, Georgia, Cambria, "Times New Roman", Times, serif);
+  }
+}
+
+/* Utilities para optimización móvil */
+@layer utilities {
+  /* Optimización de performance para listas largas */
+  .optimize-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: auto;
+    will-change: scroll-position;
+  }
+  
+  /* Reducir motion para dispositivos lentos */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  
+  /* Optimizar taps en dispositivos táctiles */
+  .touch-optimize {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  
+  /* Mejorar legibilidad en pantallas pequeñas */
+  .mobile-text {
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+  }
+  
+  /* Contenedores optimizados para móvil */
+  .mobile-container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+  
+  /* Optimización para grids responsivos */
+  .mobile-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: 1fr;
+  }
+  
+  @media (min-width: 640px) {
+    .mobile-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .mobile-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+  }
+  
+  /* Mejorar área de toque para botones pequeños */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Optimizar imágenes para diferentes densidades */
+  .responsive-img {
+    object-fit: cover;
+    object-position: center;
+    width: 100%;
+    height: auto;
+  }
+  
+  /* Contenido que se puede truncar fácilmente */
+  .truncate-mobile {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  @media (max-width: 640px) {
+    .truncate-mobile {
+      max-width: 20ch;
+    }
   }
 }

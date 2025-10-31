@@ -7,8 +7,10 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
+import { useEffect, useRef } from 'react';
 
 type NavItem = {
   href: string;
@@ -35,8 +37,10 @@ const commonNavItems: NavItem[] = [
 
 export function DashboardNav() {
   const pathname = usePathname();
+  const { setOpenMobile, isMobile } = useSidebar();
   const isProducer = pathname.startsWith('/productor');
   const isBuyer = pathname.startsWith('/comprador');
+  const prevPathnameRef = useRef(pathname);
 
   let navItems: NavItem[] = [];
   if (isProducer) {
@@ -46,6 +50,19 @@ export function DashboardNav() {
   }
 
   const allNavItems = [...navItems, ...commonNavItems];
+
+  // Solo cerrar el sidebar cuando la ruta realmente cambie (no en el primer render)
+  useEffect(() => {
+    if (isMobile && prevPathnameRef.current !== pathname) {
+      const timer = setTimeout(() => {
+        setOpenMobile(false);
+      }, 150); // Delay más corto pero suficiente para que la navegación se sienta natural
+      
+      prevPathnameRef.current = pathname;
+      return () => clearTimeout(timer);
+    }
+    prevPathnameRef.current = pathname;
+  }, [pathname, isMobile, setOpenMobile]);
 
   return (
     <SidebarMenu>

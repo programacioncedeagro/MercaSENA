@@ -3,6 +3,7 @@ import {
 } from './ai-powered-crop-recommendations';
 import { ai } from '../genkit';
 import { z } from 'zod';
+import { getCropData, getRealisticCosts, getExpectedYield, getCurrentMarketPrices } from '@/lib/crop-data-colombia';
 
 // Interfaces auxiliares
 export interface GeneratedImage {
@@ -431,31 +432,34 @@ IMPORTANTE: Todos los costos deben estar en pesos colombianos (COP) y ser realis
     
     // Aquí procesaríamos la respuesta del LLM y la estructuraríamos
     // Por simplicidad, crearemos una estructura básica que se puede expandir
+    // Obtener datos realistas del cultivo
+    const cropData = getCropData(cropType);
+    const realisticCosts = getRealisticCosts(cropType, area);
+    const expectedYield = getExpectedYield(cropType, area);
+    const marketPrices = getCurrentMarketPrices(cropType);
     
     const workPlan: ComprehensiveWorkPlanOutput = {
       projectName: `Producción de ${cropType} - ${location}`,
       cropType,
       area,
       location,
-      totalDuration: cropType.toLowerCase().includes('papa') ? 120 : 
-                     cropType.toLowerCase().includes('maíz') ? 150 :
-                     cropType.toLowerCase().includes('frijol') ? 90 : 180,
-      totalInvestment: area * (cropType.toLowerCase().includes('papa') ? 8000000 : 
-                              cropType.toLowerCase().includes('maíz') ? 6000000 : 5000000),
+      totalDuration: cropData?.duration || 150,
+      totalInvestment: realisticCosts.totalCost,
       
       mano_de_obra: {
-        description: `Personal necesario para ${area} hectáreas de ${cropType}`,
+        description: `Personal necesario para ${area} hectáreas de ${cropType} según estándares colombianos`,
         requirements: [
+          "Ingeniero agrónomo o técnico agrícola",
           "Operarios especializados en preparación de suelo",
           "Personal capacitado en siembra y mantenimiento", 
           "Supervisor técnico con experiencia en el cultivo",
           "Trabajadores para cosecha y postcosecha"
         ],
-        costs: area * 2500000,
+        costs: realisticCosts.breakdown.labor,
         recommendations: [
-          "Capacitar personal en buenas prácticas agrícolas",
+          "Capacitar personal en buenas prácticas según normativa ICA",
           "Implementar sistema de incentivos por productividad",
-          "Asegurar cumplimiento de normas laborales"
+          "Asegurar cumplimiento de normas laborales y SST"
         ]
       },
       
@@ -463,29 +467,30 @@ IMPORTANTE: Todos los costos deben estar en pesos colombianos (COP) y ser realis
         description: `Equipos necesarios para el ciclo productivo de ${cropType}`,
         equipment: [
           "Tractor con implementos de labranza",
-          "Sembradora específica para el cultivo",
-          "Sistema de riego por goteo/aspersión",
+          "Sembradora/transplantadora específica para el cultivo",
+          "Sistema de riego tecnificado",
           "Fumigadora de precisión",
-          "Equipos de cosecha"
+          "Equipos de cosecha según el cultivo"
         ],
-        costs: area * 1800000,
+        costs: realisticCosts.breakdown.machinery,
         recommendations: [
           "Evaluar alquiler vs compra según frecuencia de uso",
           "Mantener calendario de mantenimiento preventivo",
-          "Capacitar operadores en uso eficiente"
+          "Capacitar operadores en uso eficiente y seguro"
         ]
       },
       
       materiales: {
-        description: `Insumos requeridos para ${area} hectáreas`,
+        description: `Insumos requeridos para ${area} hectáreas según buenas prácticas colombianas`,
         inputs: [
-          `Semilla certificada de ${cropType}`,
-          "Fertilizantes NPK según análisis de suelo",
-          "Correctivos de acidez (cal agrícola)",
-          "Fungicidas e insecticidas",
-          "Materiales de riego y tutoreo"
+          `Semilla certificada de ${cropType} registrada ICA`,
+          "Fertilizantes según análisis de suelo",
+          "Correctivos de acidez (cal dolomítica)",
+          "Fungicidas e insecticidas registrados ICA",
+          "Materiales de riego y tutoreo",
+          "Materia orgánica compostada"
         ],
-        costs: area * 3200000,
+        costs: realisticCosts.breakdown.materials,
         recommendations: [
           "Realizar análisis de suelo antes de comprar fertilizantes",
           "Comprar semillas certificadas de proveedores confiables",
@@ -542,18 +547,15 @@ IMPORTANTE: Todos los costos deben estar en pesos colombianos (COP) y ser realis
         ]
       },
 
-      // Cronograma detallado específico para el cultivo
+      // Cronograma detallado específico para el cultivo basado en datos reales
       cronograma: {
-        totalDays: cropType.toLowerCase().includes('papa') ? 120 : 
-                   cropType.toLowerCase().includes('maíz') ? 150 :
-                   cropType.toLowerCase().includes('café') ? 365 :
-                   cropType.toLowerCase().includes('lechuga') ? 75 : 180,
+        totalDays: cropData?.duration || 150,
         phases: [
           {
             name: "Preparación del terreno",
             description: "Análisis de suelo, limpieza y preparación del lote para siembra",
             startDay: 1,
-            duration: 15,
+            duration: cropData?.phases.preparation || 15,
             category: 'preparacion' as const,
             activities: [
               {
@@ -606,8 +608,8 @@ IMPORTANTE: Todos los costos deben estar en pesos colombianos (COP) y ser realis
           {
             name: "Siembra",
             description: "Proceso de siembra y establecimiento inicial del cultivo",
-            startDay: 16,
-            duration: 10,
+            startDay: (cropData?.phases.preparation || 15) + 1,
+            duration: cropData?.phases.planting || 10,
             category: 'siembra' as const,
             activities: [
               {
@@ -660,8 +662,8 @@ IMPORTANTE: Todos los costos deben estar en pesos colombianos (COP) y ser realis
           {
             name: "Mantenimiento",
             description: "Cuidados culturales, fertilización y control fitosanitario",
-            startDay: 26,
-            duration: cropType.toLowerCase().includes('lechuga') ? 30 : 60,
+            startDay: (cropData?.phases.preparation || 15) + (cropData?.phases.planting || 10) + 1,
+            duration: cropData?.phases.maintenance || 60,
             category: 'mantenimiento' as const,
             activities: [
               {
@@ -675,7 +677,7 @@ IMPORTANTE: Todos los costos deben estar en pesos colombianos (COP) y ser realis
                 materials: ["Herbicida selectivo", "Combustible"],
                 equipment: ["Fumigadora", "Azadón", "Machete"],
                 labor: ["Aplicador certificado", "Trabajadores"],
-                estimatedCost: 300000 * area,
+                estimatedCost: Math.round((realisticCosts.breakdown.materials || 0) * 0.15 * area),
                 weatherDependency: true,
                 criticalActivity: false,
               },
@@ -714,15 +716,15 @@ IMPORTANTE: Todos los costos deben estar en pesos colombianos (COP) y ser realis
           {
             name: "Cosecha",
             description: "Recolección del producto en momento óptimo de madurez",
-            startDay: cropType.toLowerCase().includes('lechuga') ? 65 : 90,
-            duration: 15,
+            startDay: (cropData?.phases.preparation || 15) + (cropData?.phases.planting || 10) + (cropData?.phases.maintenance || 60) + 1,
+            duration: cropData?.phases.harvest || 15,
             category: 'cosecha' as const,
             activities: [
               {
                 id: "cosecha_001",
                 name: "Evaluación de madurez",
                 description: "Determinación del momento óptimo de cosecha",
-                day: cropType.toLowerCase().includes('lechuga') ? 65 : 90,
+                day: (cropData?.phases.preparation || 15) + (cropData?.phases.planting || 10) + (cropData?.phases.maintenance || 60) + 1,
                 duration: 2,
                 category: 'cosecha' as const,
                 isKeyMilestone: true,
@@ -753,15 +755,15 @@ IMPORTANTE: Todos los costos deben estar en pesos colombianos (COP) y ser realis
           {
             name: "Postcosecha",
             description: "Manejo, clasificación y preparación para comercialización",
-            startDay: cropType.toLowerCase().includes('lechuga') ? 77 : 105,
-            duration: 10,
+            startDay: (cropData?.phases.preparation || 15) + (cropData?.phases.planting || 10) + (cropData?.phases.maintenance || 60) + (cropData?.phases.harvest || 15) + 1,
+            duration: cropData?.phases.postharvest || 10,
             category: 'postcosecha' as const,
             activities: [
               {
                 id: "post_001",
                 name: "Clasificación y empaque",
                 description: "Selección por calidad y empaque para venta",
-                day: cropType.toLowerCase().includes('lechuga') ? 77 : 105,
+                day: (cropData?.phases.preparation || 15) + (cropData?.phases.planting || 10) + (cropData?.phases.maintenance || 60) + (cropData?.phases.harvest || 15) + 1,
                 duration: 5,
                 category: 'postcosecha' as const,
                 isKeyMilestone: false,
@@ -817,7 +819,7 @@ IMPORTANTE: Todos los costos deben estar en pesos colombianos (COP) y ser realis
           },
           {
             name: "Inicio de cosecha",
-            day: cropType.toLowerCase().includes('lechuga') ? 67 : 92,
+            day: (cropData?.phases.preparation || 15) + (cropData?.phases.planting || 10) + (cropData?.phases.maintenance || 60) + 1,
             description: "Producto alcanza madurez comercial",
             category: "cosecha"
           }
@@ -1102,8 +1104,7 @@ IMPORTANTE: Todos los costos deben estar en pesos colombianos (COP) y ser realis
       timeline: [],
       
       marketAnalysis: {
-        currentPrice: cropType.toLowerCase().includes('papa') ? 2500 : 
-                     cropType.toLowerCase().includes('maíz') ? 1800 : 2200,
+        currentPrice: marketPrices.farmPrice || 2200,
         historicalPrices: [],
         demand: 'Alta' as const,
         competition: 'Media' as const,

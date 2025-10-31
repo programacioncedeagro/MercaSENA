@@ -25,27 +25,41 @@ export default function TraceabilityPage() {
     const fetchProduction = async () => {
       setIsLoading(true);
       
-      const productionsRef = collectionGroup(firestore, 'productions');
-      const q = query(productionsRef, where('__name__', '==', `users/${productionId.split('_')[0]}/productions/${productionId.split('_')[1]}`));
-      
       try {
-        const querySnapshot = await getDocs(q);
+        // Buscar en todas las subcolecciones de productions
+        const productionsRef = collectionGroup(firestore, 'productions');
+        const querySnapshot = await getDocs(productionsRef);
 
-        if (!querySnapshot.empty) {
-          const docSnapshot = querySnapshot.docs[0];
-          const prodData = { ...docSnapshot.data(), id: docSnapshot.id } as Production;
-          setProduction(prodData);
-          
-          if(prodData.producerId) {
-             const producerRef = doc(firestore, 'users', prodData.producerId);
-             const producerSnap = await getDoc(producerRef);
-             if(producerSnap.exists()){
-                 setProducer(producerSnap.data() as User);
-             }
+        let foundProduction: Production | null = null;
+        let producerId: string | null = null;
+        
+        querySnapshot.forEach(docSnapshot => {
+          if (docSnapshot.id === productionId) {
+            // Extraer userId de la ruta del documento
+            const pathParts = docSnapshot.ref.path.split('/');
+            const userId = pathParts[1];
+            
+            foundProduction = { 
+              ...docSnapshot.data() as Production, 
+              id: docSnapshot.id
+            };
+            producerId = userId;
           }
+        });
 
+        if (foundProduction) {
+          setProduction(foundProduction);
+          
+          // Obtener información del productor
+          if (producerId) {
+            const producerRef = doc(firestore, 'users', producerId);
+            const producerSnap = await getDoc(producerRef);
+            if (producerSnap.exists()) {
+              setProducer(producerSnap.data() as User);
+            }
+          }
         } else {
-           setProduction(null);
+          setProduction(null);
         }
       } catch (error) {
         console.error("Error fetching traceability data:", error);

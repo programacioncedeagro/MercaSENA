@@ -29,6 +29,7 @@ const productionSchema = z.object({
   plantingDate: z.date({ required_error: 'La fecha de siembra es requerida.' }),
   location: z.string().min(1, 'La ubicación es requerida.'),
   area: z.coerce.number().min(0.1, 'El área debe ser mayor a 0.'),
+  expectedQuantity: z.coerce.number().min(1, 'La cantidad esperada debe ser mayor a 0.').optional(),
 });
 
 type ProductionFormValues = z.infer<typeof productionSchema>;
@@ -184,6 +185,17 @@ export default function NewProductionPage() {
       }
     };
 
+    // Calcular cantidad potencial si no se especificó
+    const calculateDefaultQuantity = (type: string, area: number) => {
+      const yieldPerHectare: { [key: string]: number } = {
+        'Agrícola': 15000, // kg/ha promedio para cultivos agrícolas
+        'Pecuario': 2000,  // kg por ciclo/ha promedio para ganadería
+      };
+      return Math.round(yieldPerHectare[type] * area);
+    };
+
+    const finalQuantity = data.expectedQuantity || calculateDefaultQuantity(data.type, data.area);
+
     const productionData = {
         ...data,
         plantingDate: format(data.plantingDate, 'yyyy-MM-dd'),
@@ -192,6 +204,7 @@ export default function NewProductionPage() {
         status: 'Planeación',
         producerId: user.uid,
         createdAt: new Date().toISOString(),
+        totalQuantityAvailable: finalQuantity,
         // Incluir todas las actividades del plan de trabajo IA
         activities: [initialActivity, ...planActivities],
         // Incluir el plan de trabajo completo
@@ -291,6 +304,21 @@ export default function NewProductionPage() {
               <Label htmlFor="area">Área (hectáreas) o Cantidad (unidades)</Label>
               <Input id="area" type="number" step="0.1" placeholder="Ej: 2.5" {...register('area')} />
               {errors.area && <p className="text-destructive text-sm">{errors.area.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="expectedQuantity">Cantidad Esperada (kg) - Opcional</Label>
+              <Input 
+                id="expectedQuantity" 
+                type="number" 
+                step="1" 
+                placeholder="Ej: 15000 (déjalo vacío para auto-calcular)" 
+                {...register('expectedQuantity')} 
+              />
+              <p className="text-sm text-muted-foreground">
+                Si no especificas una cantidad, se calculará automáticamente según el tipo de cultivo y área.
+              </p>
+              {errors.expectedQuantity && <p className="text-destructive text-sm">{errors.expectedQuantity.message}</p>}
             </div>
           </CardContent>
         </Card>

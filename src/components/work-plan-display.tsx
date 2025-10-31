@@ -26,6 +26,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { ComprehensiveWorkPlanOutput } from '@/ai/flows/comprehensive-work-plan';
+import { OptimizedLoading, useSlowConnection } from '@/components/optimized-loading';
 
 interface WorkPlanDisplayProps {
   workPlan: ComprehensiveWorkPlanOutput;
@@ -34,6 +35,8 @@ interface WorkPlanDisplayProps {
 }
 
 export function WorkPlanDisplay({ workPlan, onSave, onDownload }: WorkPlanDisplayProps) {
+  const isSlowConnection = useSlowConnection();
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
@@ -46,62 +49,106 @@ export function WorkPlanDisplay({ workPlan, onSave, onDownload }: WorkPlanDispla
     return `${value.toFixed(1)}%`;
   };
 
+  // Safety check for cronograma structure
+  if (!workPlan?.cronograma && !workPlan?.listaChequeo) {
+    return (
+      <Card className="mobile-container">
+        <CardContent className="text-center py-8 sm:py-12">
+          <AlertTriangle className="h-12 w-12 sm:h-16 sm:w-16 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg sm:text-xl font-semibold mb-2">Plan de trabajo incompleto</h3>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Este plan de trabajo no tiene información completa disponible.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Mostrar loading optimizado para conexiones lentas
+  if (isSlowConnection) {
+    return (
+      <div className="mobile-container">
+        <OptimizedLoading 
+          variant="skeleton" 
+          text="Optimizando para conexión lenta..." 
+          className="mb-4"
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Header del Plan */}
-      <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-6 rounded-lg">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">{workPlan.projectName}</h1>
-            <div className="flex flex-wrap gap-4 text-green-100">
-              <div className="flex items-center gap-2">
-                <Leaf className="w-4 h-4" />
-                <span>{workPlan.cropType}</span>
+    <div className="mobile-container space-y-4 sm:space-y-6">
+      {/* Header del Plan - Optimizado para móvil */}
+      <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 sm:p-6 rounded-lg touch-optimize">
+        <div className="space-y-4 sm:flex sm:justify-between sm:items-start sm:space-y-0">
+          <div className="space-y-3">
+            <h1 className="text-xl sm:text-3xl font-bold leading-tight mobile-text">{workPlan.projectName}</h1>
+            <div className="mobile-grid gap-2 sm:gap-4 text-green-100 text-sm">
+              <div className="flex items-center gap-1.5">
+                <Leaf className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="truncate-mobile">{workPlan.cropType}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                <span>{workPlan.location}</span>
+              <div className="flex items-center gap-1.5">
+                <MapPin className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="truncate-mobile">{workPlan.location}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Target className="w-4 h-4" />
-                <span>{workPlan.area} hectáreas</span>
+              <div className="flex items-center gap-1.5">
+                <Target className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span>{workPlan.area} ha</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                 <span>{workPlan.totalDuration} días</span>
               </div>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-sm text-green-100">Inversión Total</div>
-            <div className="text-2xl font-bold">{formatCurrency(workPlan.totalInvestment)}</div>
-            <Badge variant="secondary" className="mt-2">
+          <div className="text-center sm:text-right">
+            <div className="text-xs sm:text-sm text-green-100">Inversión Total</div>
+            <div className="text-lg sm:text-2xl font-bold mobile-text">{formatCurrency(workPlan.totalInvestment)}</div>
+            <Badge variant="secondary" className="mt-1 sm:mt-2 text-xs touch-target">
               Confianza: {formatPercentage(workPlan.confidenceLevel * 100)}
             </Badge>
           </div>
         </div>
       </div>
 
-      {/* Tabs Principales */}
+      {/* Tabs Principales - Optimizado para móvil */}
       <Tabs defaultValue="5m" className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="5m">Metodología 5M</TabsTrigger>
-          <TabsTrigger value="cronograma">Cronograma</TabsTrigger>
-          <TabsTrigger value="checklist">Lista Chequeo</TabsTrigger>
-          <TabsTrigger value="mercado">Mercado</TabsTrigger>
-          <TabsTrigger value="rentabilidad">Rentabilidad</TabsTrigger>
-          <TabsTrigger value="agroindustria">Agroindustria</TabsTrigger>
-          <TabsTrigger value="imagenes">Imágenes IA</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-2">
+          <TabsList className="grid grid-cols-7 w-max min-w-full gap-1">
+            <TabsTrigger value="5m" className="text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+              <span className="hidden sm:inline">Metodología </span>5M
+            </TabsTrigger>
+            <TabsTrigger value="cronograma" className="text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+              Cronograma
+            </TabsTrigger>
+            <TabsTrigger value="checklist" className="text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+              <span className="hidden sm:inline">Lista </span>Chequeo
+            </TabsTrigger>
+            <TabsTrigger value="mercado" className="text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+              Mercado
+            </TabsTrigger>
+            <TabsTrigger value="rentabilidad" className="text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+              Rentabilidad
+            </TabsTrigger>
+            <TabsTrigger value="agroindustria" className="text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+              Agroindustria
+            </TabsTrigger>
+            <TabsTrigger value="imagenes" className="text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+              <span className="hidden sm:inline">Imágenes </span>IA
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        {/* Metodología 5M */}
-        <TabsContent value="5m" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Metodología 5M - Optimizado para móvil */}
+        <TabsContent value="5m" className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Mano de Obra */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-blue-600" />
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0" />
                   Mano de Obra
                 </CardTitle>
                 <CardDescription>{workPlan.mano_de_obra.description}</CardDescription>
@@ -294,34 +341,36 @@ export function WorkPlanDisplay({ workPlan, onSave, onDownload }: WorkPlanDispla
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Duración Total:</span>
-                  <Badge variant="outline">{workPlan.cronograma.totalDays} días</Badge>
+                  <Badge variant="outline">{workPlan.cronograma?.totalDays || 0} días</Badge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Fases:</span>
-                  <Badge variant="outline">{workPlan.cronograma.phases.length} fases</Badge>
+                  <Badge variant="outline">{workPlan.cronograma?.phases?.length || 0} fases</Badge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Actividades:</span>
                   <Badge variant="outline">
-                    {workPlan.cronograma.phases.reduce((total, phase) => total + phase.activities.length, 0)} actividades
+                    {workPlan.cronograma?.phases?.reduce((total, phase) => total + (phase.activities?.length || 0), 0) || 0} actividades
                   </Badge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Hitos Clave:</span>
-                  <Badge variant="outline">{workPlan.cronograma.keyMilestones.length} hitos</Badge>
+                  <Badge variant="outline">{workPlan.cronograma?.keyMilestones?.length || 0} hitos</Badge>
                 </div>
                 
                 <Separator />
                 
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold">Hitos Importantes:</h4>
-                  {workPlan.cronograma.keyMilestones.map((milestone, idx) => (
+                  {workPlan.cronograma?.keyMilestones?.map((milestone, idx) => (
                     <div key={idx} className="flex items-center gap-2 text-sm">
                       <CheckCircle className="w-4 h-4 text-green-500" />
                       <span className="text-gray-600">Día {milestone.day}:</span>
                       <span className="font-medium">{milestone.name}</span>
                     </div>
-                  ))}
+                  )) || (
+                    <p className="text-sm text-muted-foreground">No hay hitos disponibles</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -336,7 +385,7 @@ export function WorkPlanDisplay({ workPlan, onSave, onDownload }: WorkPlanDispla
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {workPlan.cronograma.phases.map((phase, phaseIdx) => (
+                  {workPlan.cronograma?.phases?.map((phase, phaseIdx) => (
                     <div key={phaseIdx} className="border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
@@ -360,7 +409,7 @@ export function WorkPlanDisplay({ workPlan, onSave, onDownload }: WorkPlanDispla
                       <p className="text-sm text-gray-600 mb-4">{phase.description}</p>
                       
                       <div className="space-y-3">
-                        {phase.activities.map((activity, actIdx) => (
+                        {phase.activities?.map((activity, actIdx) => (
                           <div key={actIdx} className={`border rounded p-3 ${
                             activity.criticalActivity ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'
                           }`}>
@@ -421,7 +470,11 @@ export function WorkPlanDisplay({ workPlan, onSave, onDownload }: WorkPlanDispla
                         ))}
                       </div>
                     </div>
-                  ))}
+                  )) || (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">No hay fases disponibles en el cronograma</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -442,7 +495,7 @@ export function WorkPlanDisplay({ workPlan, onSave, onDownload }: WorkPlanDispla
               <CardContent className="space-y-4">
                 <div className="text-center">
                   <div className="text-3xl font-bold text-green-600">
-                    {workPlan.listaChequeo.totalItems}
+                    {workPlan.listaChequeo?.totalItems || 0}
                   </div>
                   <div className="text-sm text-gray-600">Items Totales</div>
                 </div>
@@ -450,7 +503,7 @@ export function WorkPlanDisplay({ workPlan, onSave, onDownload }: WorkPlanDispla
                 <Separator />
                 
                 <div className="space-y-3">
-                  {Object.entries(workPlan.listaChequeo.itemsPorCategoria).map(([categoria, count]) => (
+                  {Object.entries(workPlan.listaChequeo?.itemsPorCategoria || {}).map(([categoria, count]) => (
                     <div key={categoria} className="flex items-center justify-between">
                       <span className="text-sm font-medium capitalize">
                         {categoria.replace('_', ' ')}:
@@ -500,7 +553,7 @@ export function WorkPlanDisplay({ workPlan, onSave, onDownload }: WorkPlanDispla
                     <TabsTrigger value="postcosecha">Postcosecha</TabsTrigger>
                   </TabsList>
                   
-                  {Object.entries(workPlan.listaChequeo.categorias).map(([categoria, datos]) => (
+                  {Object.entries(workPlan.listaChequeo?.categorias || {}).map(([categoria, datos]) => (
                     <TabsContent key={categoria} value={categoria} className="space-y-4">
                       <div className="mb-4">
                         <h4 className="font-semibold text-lg">{datos.nombre}</h4>
