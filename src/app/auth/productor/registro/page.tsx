@@ -143,7 +143,7 @@ export default function RegistroProductorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         <Card className="shadow-2xl border-0">
           <CardHeader className="text-center pb-6">
@@ -301,16 +301,16 @@ export default function RegistroProductorPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tipo de Producción</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecciona tu tipo de producción" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="agricultura">Agricultura</SelectItem>
-                          <SelectItem value="ganaderia">Ganadería</SelectItem>
-                          <SelectItem value="mixto">Mixto (Agricultura y Ganadería)</SelectItem>
+                          <SelectItem value="agricultura">🌾 Agricultura</SelectItem>
+                          <SelectItem value="ganaderia">🐄 Ganadería</SelectItem>
+                          <SelectItem value="mixto">🌾🐄 Mixto (Agricultura y Ganadería)</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

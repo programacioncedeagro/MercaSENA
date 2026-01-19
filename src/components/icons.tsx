@@ -39,11 +39,14 @@ export function CampeSenaLogo(props: SVGProps<SVGSVGElement>) {
         <tspan fill="#8b448b">Campe</tspan>
         <tspan fill="#3fa34d">SENA</tspan>
       </text>
+      {/* Slogan with wordplay: De-v-ida / De-b-ida */}
       <text x="70" y="55" fontFamily="sans-serif" fontSize="14" fontWeight="bold" fill="#8b448b">
-        ¡Una Esperanza Devida!
+        <tspan>¡Una Esperanza De</tspan>
+        <tspan>b</tspan>
+        <tspan>ida!</tspan>
       </text>
-      {/* Checkmark */}
-      <path d="M140 45 l5 5 l10 -10" stroke="#3fa34d" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      {/* Checkmark over the 'b' to show 'v' creating dual meaning devida/debida */}
+      <path d="M199 47 l3 5 l7 -10" stroke="#3fa34d" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }

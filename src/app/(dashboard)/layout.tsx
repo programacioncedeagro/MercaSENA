@@ -147,9 +147,9 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <Sidebar>
-        <SidebarHeader>
-          <div className="flex items-center gap-2 p-2">
-            <Logo className="w-32 h-auto" />
+        <SidebarHeader className="bg-white p-0">
+          <div className="flex items-center justify-center p-4 border-b">
+            <Logo className="w-44 h-auto" />
           </div>
         </SidebarHeader>
         <SidebarContent>

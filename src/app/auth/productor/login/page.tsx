@@ -71,7 +71,7 @@ export default function LoginProductorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <Card className="shadow-2xl border-0">
           <CardHeader className="text-center pb-6">
