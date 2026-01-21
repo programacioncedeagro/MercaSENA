@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, setDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import type { Booking } from '@/lib/aula-types';
 
 export default function AdminPage() {
@@ -58,7 +58,7 @@ export default function AdminPage() {
 
     setSubmitting(true);
     try {
-      await addDoc(adminsRef, { email, createdAt: new Date().toISOString(), createdBy: user?.email || null });
+      await setDoc(doc(firestore, 'admins', email), { email, createdAt: new Date().toISOString(), createdBy: user?.email || null });
       setMessage({ type: 'success', text: 'Administrador agregado correctamente.' });
       setNewAdminEmail('');
     } catch (err) {

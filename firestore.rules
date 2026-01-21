@@ -165,5 +165,31 @@ service cloud.firestore {
       allow update: if isExistingOwner(userId);
       allow delete: if isExistingOwner(userId);
     }
+
+    /**
+     * Aula Móvil bookings
+     * - Anyone (including unauthenticated) may create a booking (public intent form).
+     * - Anyone may read bookings (public listing). NOTE: Firestore rules cannot hide fields in a document; to fully protect private fields,
+     *   consider storing `private` data in a subcollection accessible only to admins. This rule set restricts writes/updates.
+     */
+    match /aulaMovilBookings/{bookingId} {
+      function isSignedIn() { return request.auth != null; }
+      // Admins are stored as documents in /admins/{email}
+      function isAdmin() {
+        return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+      }
+
+      // Anyone can read bookings (public listing)
+      allow get, list: if true;
+
+      // Allow create from client (public intent). Validate basic structure minimally.
+      allow create: if request.resource.data.public is map()
+        && request.resource.data.public.associationName is string
+        && request.resource.data.public.requestedDate is string
+        && (request.resource.data.public.participants is int || request.resource.data.public.participants is double);
+
+      // Only admins may update or delete bookings.
+      allow update, delete: if isAdmin();
+    }
   }
 }
