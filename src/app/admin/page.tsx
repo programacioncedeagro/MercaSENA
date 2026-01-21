@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, setDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, setDoc, deleteDoc, doc, updateDoc, getDoc } from 'firebase/firestore';
 import type { Booking } from '@/lib/aula-types';
 
 export default function AdminPage() {
@@ -15,6 +15,7 @@ export default function AdminPage() {
 
   const bookingsRef = useMemoFirebase(() => collection(firestore, 'aulaMovilBookings'), [firestore]) as any;
   const { data: bookings, isLoading: isLoadingBookings } = useCollection<Booking>(bookingsRef as any);
+  const [privateCache, setPrivateCache] = useState<Record<string, any>>({});
 
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
@@ -147,6 +148,30 @@ export default function AdminPage() {
                         }
                       }} className="px-3 py-1 bg-emerald-600 text-white rounded">Confirmar</button>
                     )}
+                    <div>
+                      <button onClick={async () => {
+                        if (!b.id) return;
+                        // toggle load private
+                        if (privateCache[b.id]) {
+                          const copy = { ...privateCache };
+                          delete copy[b.id];
+                          setPrivateCache(copy);
+                          return;
+                        }
+                        try {
+                          const ref = doc(firestore, `aulaMovilBookings/${b.id}/private/private`);
+                          const snap = await getDoc(ref);
+                          if (snap.exists()) {
+                            setPrivateCache({ ...privateCache, [b.id]: snap.data() });
+                          } else {
+                            setPrivateCache({ ...privateCache, [b.id]: null });
+                          }
+                        } catch (err) {
+                          console.error('Error loading private:', err);
+                          alert('Error cargando información privada.');
+                        }
+                      }} className="px-3 py-1 bg-gray-200 rounded">{privateCache[b.id] ? 'Ocultar privado' : 'Mostrar privado'}</button>
+                    </div>
                   </div>
                 </div>
               </li>

@@ -191,5 +191,15 @@ service cloud.firestore {
       // Only admins may update or delete bookings.
       allow update, delete: if isAdmin();
     }
+
+    // Private subcollection for personal data
+    match /aulaMovilBookings/{bookingId}/private/{privateId} {
+      function isSignedIn() { return request.auth != null; }
+      function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.token.email)); }
+
+      // Allow creation from client (migration/submit). Reads/updates/deletes only allowed to admins.
+      allow create: if true;
+      allow get, list, update, delete: if isAdmin();
+    }
   }
 }

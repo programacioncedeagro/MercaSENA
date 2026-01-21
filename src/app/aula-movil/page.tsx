@@ -5,7 +5,7 @@ import { useFirestore, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import type { Booking } from '@/lib/aula-types';
 import HOLIDAYS from '@/lib/holidays';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc } from 'firebase/firestore';
 import AULA_COURSES from '@/lib/aula-courses';
 import { Card, CardHeader, CardContent, CardFooter, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -179,12 +179,12 @@ export default function AulaMovilPage() {
 
     setSubmitting(true);
     try {
-      await addDoc(bookingsRef, {
+      // Create a booking document with only public fields in the root
+      const docRef = doc(bookingsRef); // generate id client-side
+      await setDoc(docRef, {
         courseId: selectedCourseId || null,
         courseTitle: (AULA_COURSES.find(c => c.id === selectedCourseId)?.title) || null,
         associationName: associationName.trim(),
-        contactName: contactName.trim() || null,
-        contactPhone: contactPhone.trim() || null,
         participants,
         canReadWrite,
         // public fields visible in lists (no personal contact data)
@@ -204,14 +204,22 @@ export default function AulaMovilPage() {
           status: 'propuesta',
           createdAt: new Date().toISOString(),
         },
-        // private fields only for admins
-        private: {
+        createdAt: new Date().toISOString(),
+      });
+
+      // Write private fields into a protected subcollection `private/private`
+      try {
+        const privateRefPath = `aulaMovilBookings/${docRef.id}/private/private`;
+        const privateRef = doc(firestore, privateRefPath);
+        await setDoc(privateRef, {
           contactName: contactName.trim() || null,
           contactPhone: contactPhone.trim() || null,
           createdAt: new Date().toISOString(),
-        },
-        createdAt: new Date().toISOString(),
-      });
+        });
+      } catch (innerErr) {
+        // Non-fatal: log and continue. The public booking still exists.
+        console.error('Error writing private subdocument:', innerErr);
+      }
 
       const successText = 'Solicitud enviada correctamente. Le contactaremos para coordinar.';
       setMessage({ type: 'success', text: successText });
