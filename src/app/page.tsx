@@ -113,6 +113,14 @@ export default function WelcomePage() {
               >
                 Ver Demo
               </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => router.push('/aula-movil')}
+                className="border-green-200 text-green-700 hover:bg-green-50 px-8 py-3 text-lg"
+              >
+                Catálogo de Cursos
+              </Button>
             </div>
           </div>
         </div>

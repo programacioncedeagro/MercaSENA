@@ -69,22 +69,39 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="16x16" href="/icon-16x16.png" />
         <link rel="shortcut icon" href="/favicon.ico" />
         
-        {/* Service Worker Registration */}
+        {/* Service Worker Registration - only enable in production to avoid dev caching issues */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js')
-                    .then(function(registration) {
-                      console.log('SW registered: ', registration);
-                    })
-                    .catch(function(registrationError) {
-                      console.log('SW registration failed: ', registrationError);
+            __html: (() => {
+              const isProd = process.env.NODE_ENV === 'production';
+              return `
+                (function(){
+                  if ('serviceWorker' in navigator) {
+                    if (${isProd} === false) {
+                      navigator.serviceWorker.getRegistrations().then(function(registrations){
+                        registrations.forEach(function(r){
+                          try { r.unregister(); } catch(e) { /* ignore */ }
+                        });
+                      }).catch(()=>{});
+                      if (caches && caches.keys) {
+                        caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).catch(()=>{});
+                      }
+                      return;
+                    }
+
+                    window.addEventListener('load', function() {
+                      navigator.serviceWorker.register('/sw.js')
+                        .then(function(registration) {
+                          console.log('SW registered: ', registration);
+                        })
+                        .catch(function(registrationError) {
+                          console.log('SW registration failed: ', registrationError);
+                        });
                     });
-                });
-              }
-            `,
+                  }
+                })();
+              `;
+            })(),
           }}
         />
       </head>

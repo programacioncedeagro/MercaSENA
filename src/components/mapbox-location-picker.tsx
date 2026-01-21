@@ -1,6 +1,11 @@
-'use client';
+"use client";
 
 import React, { useCallback, useState, useEffect } from 'react';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import Map, { Marker, NavigationControl, type MapRef } from 'react-map-gl/mapbox';
+
+// Mapbox token - Next.js inlines `process.env.NEXT_PUBLIC_*` at build time for the client
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,8 +30,8 @@ interface MapboxLocationPickerProps {
   showCoordinates?: boolean;
 }
 
-// Ubicación por defecto: Bogotá, Colombia
-const DEFAULT_LOCATION: [number, number] = [4.6097, -74.0817];
+// Ubicación por defecto: Centro aproximado del departamento de Boyacá
+const DEFAULT_LOCATION: [number, number] = [5.6356, -73.5242];
 
 export function MapboxLocationPicker({
   onLocationSelect,
@@ -249,6 +254,8 @@ export function MapboxLocationPicker({
     });
   }, [getLocationInfo, onLocationSelect, toast]);
 
+  const heightClass = height === '260px' ? 'h-[260px]' : height === '400px' ? 'h-[400px]' : 'h-96';
+
   return (
     <Card className={className}>
       <CardHeader>
@@ -377,28 +384,47 @@ export function MapboxLocationPicker({
           )}
         </div>
 
-        {/* Mapa simplificado - Solo información visual */}
-        <div 
-          className="relative bg-gray-100 rounded-md flex items-center justify-center border-2 border-dashed border-gray-300"
-          style={{ height }}
-        >
-          <div className="text-center space-y-2">
-            <Globe className="w-8 h-8 mx-auto text-gray-400" />
-            <p className="text-sm text-gray-500">Vista del Mapa</p>
-            <p className="text-xs text-gray-400">
-              Lat: {currentLocation.coordinates[0].toFixed(6)}<br />
-              Lng: {currentLocation.coordinates[1].toFixed(6)}
-            </p>
-            <Button 
-              onClick={openInGoogleMaps}
-              variant="outline"
-              size="sm"
-              className="mt-2"
-            >
-              <ExternalLink className="w-3 h-3 mr-1" />
-              Abrir en Google Maps
-            </Button>
-          </div>
+        {/* Mapa interactivo */}
+        <div className={`relative rounded-md overflow-hidden ${heightClass}`}>
+          <Map
+            initialViewState={{
+              longitude: currentLocation.coordinates[1],
+              latitude: currentLocation.coordinates[0],
+              zoom: 9
+            }}
+            mapboxAccessToken={MAPBOX_TOKEN}
+            style={{ width: '100%', height: '100%' }}
+            mapStyle="mapbox://styles/mapbox/streets-v11"
+            onClick={async (evt) => {
+              try {
+                const anyEvt: any = evt;
+                let lng: number | undefined;
+                let lat: number | undefined;
+                if (Array.isArray(anyEvt.lngLat)) {
+                  [lng, lat] = anyEvt.lngLat;
+                } else if (anyEvt.lngLat && typeof anyEvt.lngLat.toArray === 'function') {
+                  const arr = anyEvt.lngLat.toArray();
+                  if (Array.isArray(arr)) [lng, lat] = arr as [number, number];
+                } else if (anyEvt.lngLat && typeof anyEvt.lngLat.lng === 'number') {
+                  lng = anyEvt.lngLat.lng;
+                  lat = anyEvt.lngLat.lat;
+                }
+                if (typeof lat !== 'number' || typeof lng !== 'number') return;
+                const loc = await getLocationInfo(lat, lng);
+                setCurrentLocation(loc);
+                setManualLat(lat.toString());
+                setManualLng(lng.toString());
+                onLocationSelect(loc);
+              } catch (err) {
+                console.error('Error handling map click:', err);
+              }
+            }}
+          >
+            <NavigationControl position="top-left" />
+            <Marker longitude={currentLocation.coordinates[1]} latitude={currentLocation.coordinates[0]} anchor="bottom">
+              <MapPin className="w-6 h-6 text-red-600" />
+            </Marker>
+          </Map>
         </div>
       </CardContent>
     </Card>
