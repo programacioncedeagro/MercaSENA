@@ -10,22 +10,32 @@
   }
   
   html {
-    /* Habilitar smooth scrolling de forma eficiente */
-    scroll-behavior: smooth;
+    /* Desactivar scroll-behavior: smooth en el root para evitar saltos inesperados con Portals */
+    scroll-behavior: auto !important;
+    /* Asegurar que el scrollbar siempre esté presente para evitar saltos horizontales */
+    overflow-y: scroll;
     /* Mejorar rendering de texto en dispositivos de baja resolución */
     -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeSpeed;
   }
   
   body {
+    /* Asegurar que el scroll no salte al abrir modales/selects */
+    scroll-behavior: auto !important;
     /* Minimizar repaints */
-    transform: translateZ(0);
+    transform: none; /* Quitamos transform para evitar problemas de stacking context */
     backface-visibility: hidden;
     perspective: 1000;
     /* Optimizar para touch */
     touch-action: manipulation;
+  }
+
+  /* Evitar saltos de scroll cuando Radix bloquea el scroll del cuerpo */
+  [data-radix-scroll-lock] {
+    scroll-behavior: auto !important;
   }
   
   /* Optimizar imágenes para carga rápida */
@@ -135,7 +145,7 @@
 @layer utilities {
   /* Optimización de performance para listas largas */
   .optimize-scroll {
-    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
     scroll-behavior: auto;
     will-change: scroll-position;
   }

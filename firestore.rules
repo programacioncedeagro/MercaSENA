@@ -192,6 +192,22 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    /**
+     * @description Aula courses catalog persisted by admins.
+     * - Anyone can read the catalog.
+     * - Only admins (documents under /admins/{email}) can create/update/delete courses.
+     */
+    match /aulaCourses/{courseId} {
+      function isSignedIn() { return request.auth != null; }
+      function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.token.email)); }
+
+      // Public read
+      allow get, list: if true;
+
+      // Only admins may write the course catalog
+      allow create, update, delete: if isAdmin();
+    }
+
     // Private subcollection for personal data
     match /aulaMovilBookings/{bookingId}/private/{privateId} {
       function isSignedIn() { return request.auth != null; }

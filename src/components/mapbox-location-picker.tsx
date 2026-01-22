@@ -333,7 +333,7 @@ export function MapboxLocationPicker({
                 step="any"
               />
             </div>
-            <Button onClick={handleManualCoordinates} className="w-full">
+            <Button type="button" onClick={handleManualCoordinates} className="w-full">
               <MapPin className="w-4 h-4 mr-2" />
               Usar Coordenadas
             </Button>
@@ -342,11 +342,11 @@ export function MapboxLocationPicker({
 
         {/* Controles de ubicación */}
         <div className="flex gap-2">
-          <Button onClick={getCurrentLocation} variant="outline" className="flex-1">
+          <Button type="button" onClick={getCurrentLocation} variant="outline" className="flex-1">
             <Crosshair className="w-4 h-4 mr-2" />
             Mi Ubicación
           </Button>
-          <Button onClick={openInGoogleMaps} variant="outline" className="flex-1">
+          <Button type="button" onClick={openInGoogleMaps} variant="outline" className="flex-1">
             <Globe className="w-4 h-4 mr-2" />
             Ver en Maps
           </Button>
@@ -357,6 +357,7 @@ export function MapboxLocationPicker({
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Ubicación Actual:</span>
             <Button
+              type="button"
               onClick={copyCoordinates}
               variant="ghost"
               size="sm"

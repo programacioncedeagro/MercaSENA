@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
-import { Tractor, ShoppingCart, ArrowRight, Users, Leaf } from 'lucide-react';
+import { Tractor, ShoppingCart, ArrowRight, Users, Leaf, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AuthSelectionPage() {
@@ -102,8 +102,19 @@ export default function AuthSelectionPage() {
           </Card>
         </div>
 
+        {/* Acceso para Instructores (Admin) */}
+        <div className="text-center pt-8 border-t border-gray-100">
+          <p className="text-sm text-gray-500 mb-4">¿Eres instructor o coordinador Campesena?</p>
+          <Link href="/auth/programacion">
+            <Button variant="ghost" className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 font-bold gap-2">
+              <ShieldCheck className="w-4 h-4" />
+              Acceder al Portal de Programación
+            </Button>
+          </Link>
+        </div>
+
         {/* Footer info */}
-        <div className="text-center text-sm text-gray-500 max-w-2xl mx-auto">
+        <div className="text-center text-sm text-gray-500 max-w-2xl mx-auto mt-8">
           <p>
             Al registrarte, aceptas nuestros términos y condiciones. 
             MercaSENA es una plataforma segura que protege la información de todos sus usuarios.

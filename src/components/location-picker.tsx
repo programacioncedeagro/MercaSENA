@@ -159,6 +159,7 @@ export function LocationPicker({
               {searchResults.map((result, index) => (
                 <button
                   key={`${result.department.id}-${result.municipality.id}`}
+                  type="button"
                   className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center justify-between"
                   onClick={() => selectMunicipality(result.department, result.municipality)}
                 >
@@ -181,7 +182,7 @@ export function LocationPicker({
             onChange={(e) => setManualCoords(e.target.value)}
             className="flex-1"
           />
-          <Button onClick={handleManualCoords} variant="outline">
+          <Button type="button" onClick={handleManualCoords} variant="outline">
             Establecer
           </Button>
         </div>
@@ -214,6 +215,7 @@ export function LocationPicker({
           </div>
           <div className="flex gap-2">
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               onClick={copyCoordinates}
@@ -226,6 +228,7 @@ export function LocationPicker({
               )}
             </Button>
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               onClick={openInGoogleMaps}
@@ -244,7 +247,7 @@ export function LocationPicker({
             <p className="text-sm text-green-600 mb-4">
               Token de Mapbox disponible - Mapa en desarrollo
             </p>
-            <Button onClick={openInGoogleMaps} variant="outline" size="sm">
+            <Button type="button" onClick={openInGoogleMaps} variant="outline" size="sm">
               <ExternalLink className="h-4 w-4 mr-2" />
               Ver en Google Maps
             </Button>
@@ -265,6 +268,7 @@ export function LocationPicker({
             ].map((city) => (
               <Button
                 key={city.name}
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => {

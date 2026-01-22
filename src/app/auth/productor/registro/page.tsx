@@ -301,13 +301,16 @@ export default function RegistroProductorPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tipo de Producción</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecciona tu tipo de producción" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="z-[100]">
                           <SelectItem value="agricultura">🌾 Agricultura</SelectItem>
                           <SelectItem value="ganaderia">🐄 Ganadería</SelectItem>
                           <SelectItem value="mixto">🌾🐄 Mixto (Agricultura y Ganadería)</SelectItem>

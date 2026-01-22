@@ -36,6 +36,7 @@ export interface Booking {
   canReadWrite?: boolean;
   public?: BookingPublic;
   private?: BookingPrivate;
+  location?: BookingLocation;
   reservedDates?: string[]; // legacy
   requestedDate?: string; // legacy
   status?: BookingStatus; // legacy
