@@ -4,16 +4,7 @@
 
 const { initializeApp } = require('firebase/app');
 const { getFirestore, collection, getDocs, updateDoc, doc } = require('firebase/firestore');
-
-// Configuración de Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyBMtF7Nj5tMwKVPyhe4zKYxJodKbqDhAIo",
-  authDomain: "studio-5379754521-69f86.firebaseapp.com",
-  projectId: "studio-5379754521-69f86",
-  storageBucket: "studio-5379754521-69f86.firebasestorage.app",
-  messagingSenderId: "943518391543",
-  appId: "1:943518391543:web:3fbea07ee3b500a56b87f2"
-};
+const { firebaseConfig } = require('./firebase-config');
 
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
