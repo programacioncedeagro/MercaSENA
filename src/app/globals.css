@@ -15,8 +15,6 @@
     /* Asegurar que el scrollbar siempre esté presente para evitar saltos horizontales */
     overflow-y: scroll;
     /* Mejorar rendering de texto en dispositivos de baja resolución */
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeSpeed;
