@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Leaf, ShoppingCart, Bot, BarChart, User, LucideIcon, Package } from 'lucide-react';
+import { Leaf, ShoppingCart, Bot, BarChart, User, LucideIcon, Package, Network, ClipboardCheck } from 'lucide-react';
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -23,12 +23,18 @@ const producerNavItems: NavItem[] = [
   { href: '/productor', icon: BarChart, label: 'Dashboard', tooltip: 'Dashboard' },
   { href: '/productor/produccion', icon: Leaf, label: 'Mis Producciones', tooltip: 'Producciones' },
   { href: '/productor/mercado', icon: ShoppingCart, label: 'Mercado', tooltip: 'Mercado' },
+  { href: '/productor/redes-populares', icon: Network, label: 'Redes Populares', tooltip: 'Redes Populares' },
   { href: '/productor/asistente-ia', icon: Bot, label: 'Asistente IA', tooltip: 'Asistente IA' },
 ];
 
 const buyerNavItems: NavItem[] = [
   { href: '/comprador', icon: ShoppingCart, label: 'Mercado', tooltip: 'Mercado' },
   { href: '/comprador/compras', icon: Package, label: 'Mis Compras', tooltip: 'Compras' },
+];
+
+const networksNavItems: NavItem[] = [
+  { href: '/redes-populares', icon: Network, label: 'Panel', tooltip: 'Panel de Redes Populares' },
+  { href: '/redes-populares/proceso', icon: ClipboardCheck, label: 'Proceso', tooltip: 'Proceso Redes Populares' },
 ];
 
 const commonNavItems: NavItem[] = [
@@ -40,6 +46,7 @@ export function DashboardNav() {
   const { setOpenMobile, isMobile } = useSidebar();
   const isProducer = pathname.startsWith('/productor');
   const isBuyer = pathname.startsWith('/comprador');
+  const isNetworks = pathname.startsWith('/redes-populares');
   const prevPathnameRef = useRef(pathname);
 
   let navItems: NavItem[] = [];
@@ -47,6 +54,8 @@ export function DashboardNav() {
     navItems = producerNavItems;
   } else if (isBuyer) {
     navItems = buyerNavItems;
+  } else if (isNetworks) {
+    navItems = networksNavItems;
   }
 
   const allNavItems = [...navItems, ...commonNavItems];
@@ -70,7 +79,7 @@ export function DashboardNav() {
         <SidebarMenuItem key={item.href}>
           <SidebarMenuButton
             asChild
-            isActive={pathname === item.href || (item.href !== '/productor' && item.href !== '/comprador' && pathname.startsWith(item.href))}
+            isActive={pathname === item.href || (item.href !== '/productor' && item.href !== '/comprador' && item.href !== '/redes-populares' && pathname.startsWith(item.href))}
             tooltip={{ children: item.tooltip }}
             className={cn("h-14 text-base justify-start")}
           >

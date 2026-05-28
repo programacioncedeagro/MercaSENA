@@ -121,6 +121,14 @@ export default function WelcomePage() {
               >
                 Catálogo de Cursos
               </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => router.push('/productor/redes-populares')}
+                className="border-green-200 text-green-700 hover:bg-green-50 px-8 py-3 text-lg"
+              >
+                Redes Populares 2026
+              </Button>
             </div>
           </div>
         </div>

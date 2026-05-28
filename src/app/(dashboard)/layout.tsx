@@ -104,6 +104,7 @@ export default function DashboardLayout({
       const isAuthPage = pathname === '/login' || pathname === '/signup';
       const isProducerPath = pathname.startsWith('/productor');
       const isBuyerPath = pathname.startsWith('/comprador');
+      const isNetworksPath = pathname.startsWith('/redes-populares');
 
       // If user is on an auth page but is already logged in, redirect them
       if (isAuthPage) {
@@ -111,6 +112,8 @@ export default function DashboardLayout({
           router.replace('/productor');
         } else if (userRole === 'comprador') {
           router.replace('/comprador');
+        } else if (userRole === 'redes_populares') {
+          router.replace('/redes-populares');
         }
         return;
       }
@@ -120,6 +123,8 @@ export default function DashboardLayout({
         router.replace('/productor');
       } else if (userRole === 'comprador' && !isBuyerPath) {
         router.replace('/comprador');
+      } else if (userRole === 'redes_populares' && !isNetworksPath) {
+        router.replace('/redes-populares');
       }
     }
   }, [user, userData, pathname, router]);

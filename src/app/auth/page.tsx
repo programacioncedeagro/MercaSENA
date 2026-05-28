@@ -3,13 +3,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
-import { Tractor, ShoppingCart, ArrowRight, Users, Leaf, ShieldCheck } from 'lucide-react';
+import { Tractor, ShoppingCart, ArrowRight, Users, Leaf, ShieldCheck, Network, ClipboardCheck } from 'lucide-react';
 import Link from 'next/link';
+import { PWAInstallButton } from '@/components/pwa-install-button';
 
 export default function AuthSelectionPage() {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl space-y-8">
+      <div className="w-full max-w-7xl space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">
           <Logo className="w-64 h-auto mx-auto mb-6" />
@@ -20,9 +21,9 @@ export default function AuthSelectionPage() {
         </div>
 
         {/* Selector de Rol */}
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {/* Productor */}
-          <Card className="group hover:shadow-2xl transition-all duration-300 hover:scale-105 border-2 hover:border-green-500">
+          <Card className="group hover:shadow-2xl transition-all duration-300 border-2 hover:border-green-500">
             <CardHeader className="text-center pb-4">
               <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-green-200 transition-colors">
                 <Tractor className="w-10 h-10 text-green-600" />
@@ -30,7 +31,7 @@ export default function AuthSelectionPage() {
               <CardTitle className="text-2xl font-bold text-green-800">Soy Productor</CardTitle>
               <p className="text-green-600">Vendo mis productos agrícolas</p>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 flex h-full flex-col">
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-sm text-gray-600">
                   <Leaf className="w-4 h-4 text-green-500" />
@@ -46,14 +47,14 @@ export default function AuthSelectionPage() {
                 </div>
               </div>
               
-              <div className="space-y-3">
+              <div className="space-y-3 mt-auto">
                 <Link href="/auth/productor/registro" className="block">
-                  <Button className="w-full h-12 text-lg bg-green-600 hover:bg-green-700">
+                  <Button className="w-full min-h-12 h-auto whitespace-normal text-center leading-tight py-3 px-3 text-sm sm:text-base bg-green-600 hover:bg-green-700">
                     Registrarme como Productor
                   </Button>
                 </Link>
                 <Link href="/auth/productor/login" className="block">
-                  <Button variant="outline" className="w-full h-12 text-lg border-green-600 text-green-600 hover:bg-green-50">
+                  <Button variant="outline" className="w-full min-h-12 h-auto whitespace-normal text-center leading-tight py-3 px-3 text-sm sm:text-base border-green-600 text-green-600 hover:bg-green-50">
                     Ya tengo cuenta de Productor
                   </Button>
                 </Link>
@@ -62,7 +63,7 @@ export default function AuthSelectionPage() {
           </Card>
 
           {/* Comprador */}
-          <Card className="group hover:shadow-2xl transition-all duration-300 hover:scale-105 border-2 hover:border-blue-500">
+          <Card className="group hover:shadow-2xl transition-all duration-300 border-2 hover:border-blue-500">
             <CardHeader className="text-center pb-4">
               <div className="mx-auto w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">
                 <ShoppingCart className="w-10 h-10 text-blue-600" />
@@ -70,7 +71,7 @@ export default function AuthSelectionPage() {
               <CardTitle className="text-2xl font-bold text-blue-800">Soy Comprador</CardTitle>
               <p className="text-blue-600">Busco productos agrícolas</p>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 flex h-full flex-col">
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-sm text-gray-600">
                   <Leaf className="w-4 h-4 text-blue-500" />
@@ -86,21 +87,63 @@ export default function AuthSelectionPage() {
                 </div>
               </div>
               
-              <div className="space-y-3">
+              <div className="space-y-3 mt-auto">
                 <Link href="/auth/comprador/registro" className="block">
-                  <Button className="w-full h-12 text-lg bg-blue-600 hover:bg-blue-700">
+                  <Button className="w-full min-h-12 h-auto whitespace-normal text-center leading-tight py-3 px-3 text-sm sm:text-base bg-blue-600 hover:bg-blue-700">
                     Registrarme como Comprador
                   </Button>
                 </Link>
                 <Link href="/auth/comprador/login" className="block">
-                  <Button variant="outline" className="w-full h-12 text-lg border-blue-600 text-blue-600 hover:bg-blue-50">
+                  <Button variant="outline" className="w-full min-h-12 h-auto whitespace-normal text-center leading-tight py-3 px-3 text-sm sm:text-base border-blue-600 text-blue-600 hover:bg-blue-50">
                     Ya tengo cuenta de Comprador
                   </Button>
                 </Link>
               </div>
             </CardContent>
           </Card>
+
+          {/* Redes Populares */}
+          <Card className="group hover:shadow-2xl transition-all duration-300 border-2 hover:border-emerald-500">
+            <CardHeader className="text-center pb-4">
+              <div className="mx-auto w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-emerald-200 transition-colors">
+                <Network className="w-10 h-10 text-emerald-600" />
+              </div>
+              <CardTitle className="text-2xl font-bold text-emerald-800">Redes Populares</CardTitle>
+              <p className="text-emerald-600">Gestiono convocatoria y evaluaciones</p>
+            </CardHeader>
+            <CardContent className="space-y-6 flex h-full flex-col">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <ClipboardCheck className="w-4 h-4 text-emerald-500" />
+                  <span>Aplica y gestiona el test de evaluación</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <Users className="w-4 h-4 text-emerald-500" />
+                  <span>Administra la vinculación de organizaciones</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <ArrowRight className="w-4 h-4 text-emerald-500" />
+                  <span>Consolida información para procesamiento</span>
+                </div>
+              </div>
+
+              <div className="space-y-3 mt-auto">
+                <Link href="/auth/redes-populares/registro" className="block">
+                  <Button className="w-full min-h-12 h-auto whitespace-normal text-center leading-tight py-3 px-3 text-sm sm:text-base bg-emerald-600 hover:bg-emerald-700">
+                    Registrarme en Redes Populares
+                  </Button>
+                </Link>
+                <Link href="/auth/redes-populares/login" className="block">
+                  <Button variant="outline" className="w-full min-h-12 h-auto whitespace-normal text-center leading-tight py-3 px-3 text-sm sm:text-base border-emerald-600 text-emerald-600 hover:bg-emerald-50">
+                    Ya tengo cuenta de Redes Populares
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        <PWAInstallButton />
 
         {/* Acceso para Instructores (Admin) */}
         <div className="text-center pt-8 border-t border-gray-100">

@@ -217,5 +217,41 @@ service cloud.firestore {
       allow create: if true;
       allow get, list, update, delete: if isAdmin();
     }
+
+    /**
+     * Evaluaciones del proceso Redes Populares 2026
+     * - Cualquier usuario (autenticado o no) puede crear evaluaciones desde el formulario de campo.
+     * - Solo administradores pueden leer, actualizar o eliminar para procesamiento interno.
+     */
+    match /redesPopulares2026Evaluaciones/{evaluationId} {
+      function isSignedIn() { return request.auth != null; }
+      function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.token.email)); }
+
+      allow get, list, update, delete: if isAdmin();
+
+      allow create: if request.resource.data.organization is map
+        && request.resource.data.dynamizer is map
+        && request.resource.data.summary is map
+        && request.resource.data.criteria is list
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.source == 'test_redes_populares_2026';
+    }
+
+    /**
+     * Evaluaciones del proceso Redes Populares (genérico)
+     */
+    match /redesPopularesEvaluaciones/{evaluationId} {
+      function isSignedIn() { return request.auth != null; }
+      function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.token.email)); }
+
+      allow get, list, update, delete: if isAdmin();
+
+      allow create: if request.resource.data.organization is map
+        && request.resource.data.evaluator is map
+        && request.resource.data.summary is map
+        && request.resource.data.criteria is list
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.source == 'test_redes_populares';
+    }
   }
 }

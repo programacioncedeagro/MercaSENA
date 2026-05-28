@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ComprehensiveWorkPlanOutput } from '@/ai/flows/comprehensive-work-plan';
 
-export type UserRole = 'productor' | 'comprador';
+export type UserRole = 'productor' | 'comprador' | 'redes_populares';
 
 export type User = {
   id: string;
